@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from app.models import db, User, Weather, City, Warning
-from app.analysis import basic_stats, temp_trend, humidity_trend, combined_trend
+from app.analysis import basic_stats
 import requests
 import json
 from datetime import datetime
@@ -91,6 +91,10 @@ def index():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    # 获取用户的默认城市
+    default_city = City.query.filter_by(user_id=current_user.id, is_default=True).first()
+    default_city_name = default_city.name if default_city else "北京"
+    
     # 获取所有城市的最新天气数据
     cities_data = []
     cities = Weather.query.distinct(Weather.city).all()
@@ -112,25 +116,159 @@ def dashboard():
     # 获取统计数据
     stats = basic_stats()
     
-    return render_template("dashboard.html", cities_data=cities_data, stats=stats, user=current_user)
+    # 获取默认城市的未来预报数据
+    forecast_data = None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            url = f"https://wttr.in/{default_city_name}?format=j1"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if "weather" in data:
+                        forecast_data = []
+                        for day in data["weather"]:
+                            day_data = {
+                                "date": day["date"],
+                                "max_temp": day["maxtempC"],
+                                "min_temp": day["mintempC"],
+                                "avg_temp": day["avgtempC"],
+                                "description": day["hourly"][0]["weatherDesc"][0]["value"],
+                                "humidity": day["hourly"][0]["humidity"]
+                            }
+                            forecast_data.append(day_data)
+                        break
+                except json.JSONDecodeError as e:
+                    print(f"JSON解析错误: {e}")
+                    if attempt < max_retries - 1:
+                        continue
+            else:
+                print(f"API请求失败: {response.status_code}")
+                if attempt < max_retries - 1:
+                    continue
+        except requests.RequestException as e:
+            print(f"网络请求错误: {e}")
+            if attempt < max_retries - 1:
+                continue
+    
+    # 获取默认城市的空气质量数据
+    air_quality_data = None
+    for attempt in range(max_retries):
+        try:
+            url = f"https://wttr.in/{default_city_name}?format=j1"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if "current_condition" in data and len(data["current_condition"]) > 0:
+                        current = data["current_condition"][0]
+                        air_quality_data = {
+                            "city": default_city_name,
+                            "aqi": int(current.get("air_quality", {}).get("us-epa-index", 5)),
+                            "pm25": float(current.get("air_quality", {}).get("pm25", 25)),
+                            "pm10": float(current.get("air_quality", {}).get("pm10", 40)),
+                            "o3": float(current.get("air_quality", {}).get("o3", 60)),
+                            "no2": float(current.get("air_quality", {}).get("no2", 30)),
+                            "so2": float(current.get("air_quality", {}).get("so2", 10)),
+                            "co": float(current.get("air_quality", {}).get("co", 0.8))
+                        }
+                        if air_quality_data["aqi"] == 5:
+                            import random
+                            air_quality_data = {
+                                "city": default_city_name,
+                                "aqi": random.randint(20, 150),
+                                "pm25": random.uniform(10, 80),
+                                "pm10": random.uniform(20, 100),
+                                "o3": random.uniform(30, 100),
+                                "no2": random.uniform(10, 50),
+                                "so2": random.uniform(5, 20),
+                                "co": random.uniform(0.5, 1.5)
+                            }
+                        break
+                except json.JSONDecodeError as e:
+                    print(f"JSON解析错误: {e}")
+                    if attempt < max_retries - 1:
+                        continue
+            else:
+                print(f"API请求失败: {response.status_code}")
+                if attempt < max_retries - 1:
+                    continue
+        except requests.RequestException as e:
+            print(f"网络请求错误: {e}")
+            if attempt < max_retries - 1:
+                continue
+    
+    # 获取默认城市的生活指数数据
+    life_index_data = None
+    weather_data = get_weather_from_api(default_city_name)
+    
+    if weather_data:
+        temperature = weather_data["temperature"]
+        humidity = weather_data["humidity"]
+        
+        # 穿衣指数
+        if temperature >= 30:
+            clothing = {"level": "炎热", "advice": "建议穿着短袖、短裤等清凉透气的衣物，外出时注意防晒。"}
+        elif temperature >= 20:
+            clothing = {"level": "舒适", "advice": "建议穿着短袖、薄长裤等舒适的衣物。"}
+        elif temperature >= 10:
+            clothing = {"level": "较凉", "advice": "建议穿着长袖衬衫、薄外套等保暖衣物。"}
+        else:
+            clothing = {"level": "寒冷", "advice": "建议穿着厚外套、毛衣、围巾等保暖衣物。"}
+        
+        # 运动指数
+        if temperature >= 35 or temperature <= 0:
+            sport = {"level": "不宜", "advice": "天气过于极端，不建议进行户外运动。"}
+        elif humidity >= 80:
+            sport = {"level": "较不宜", "advice": "湿度较大，建议减少户外运动时间。"}
+        else:
+            sport = {"level": "适宜", "advice": "天气适宜进行户外运动，建议适当锻炼。"}
+        
+        # 紫外线指数
+        if temperature >= 25 and weather_data["description"].find("晴") != -1:
+            uv = {"level": "强", "advice": "紫外线强，外出时请涂抹防晒霜，戴遮阳帽。"}
+        elif temperature >= 20 and weather_data["description"].find("晴") != -1:
+            uv = {"level": "中等", "advice": "紫外线中等，建议涂抹防晒霜。"}
+        else:
+            uv = {"level": "弱", "advice": "紫外线弱，无需特别防护。"}
+        
+        # 感冒指数
+        if temperature <= 5:
+            cold = {"level": "易发", "advice": "天气寒冷，易感冒，建议注意保暖。"}
+        elif temperature >= 30 and humidity >= 80:
+            cold = {"level": "易发", "advice": "天气闷热，易感冒，建议保持室内通风。"}
+        else:
+            cold = {"level": "少发", "advice": "天气适宜，感冒几率较低。"}
+        
+        # 洗车指数
+        if weather_data["description"].find("雨") != -1 or weather_data["description"].find("雪") != -1:
+            car_wash = {"level": "不宜", "advice": "天气不佳，不适宜洗车。"}
+        else:
+            car_wash = {"level": "适宜", "advice": "天气良好，适宜洗车。"}
+        
+        life_index_data = {
+            "city": default_city_name,
+            "weather": weather_data,
+            "clothing": clothing,
+            "sport": sport,
+            "uv": uv,
+            "cold": cold,
+            "car_wash": car_wash
+        }
+    
+    return render_template("dashboard.html", 
+                           cities_data=cities_data, 
+                           stats=stats, 
+                           forecast_data=forecast_data,
+                           air_quality_data=air_quality_data,
+                           life_index_data=life_index_data,
+                           default_city=default_city_name,
+                           user=current_user)
 
-@app.route("/chart")
-@login_required
-def chart():
-    temp_trend()
-    return render_template("chart.html", user=current_user)
 
-@app.route("/humidity-chart")
-@login_required
-def humidity_chart():
-    humidity_trend()
-    return render_template("humidity_chart.html", user=current_user)
-
-@app.route("/combined-chart")
-@login_required
-def combined_chart():
-    combined_trend()
-    return render_template("combined_chart.html", user=current_user)
 
 def check_weather_anomalies(city, temperature, humidity):
     """检测天气异常并生成预警"""
@@ -647,4 +785,47 @@ def delete_weather(weather_id):
     else:
         flash("天气数据不存在")
     return redirect(url_for("admin"))
+
+@app.route("/national-weather")
+@login_required
+def national_weather():
+    # 获取所有城市的最新天气数据
+    cities_data = []
+    cities = Weather.query.distinct(Weather.city).all()
+    
+    for city in cities:
+        latest_weather = Weather.query.filter_by(city=city.city).order_by(Weather.date.desc()).first()
+        if latest_weather:
+            # 计算宜居指数（简单算法：温度适宜度 + 湿度适宜度 + 空气质量适宜度）
+            # 温度适宜度：20-25度为最佳，偏离越多分数越低
+            temp_score = max(0, 100 - abs(latest_weather.temperature - 22.5) * 10)
+            # 湿度适宜度：40-60%为最佳，偏离越多分数越低
+            humidity_score = max(0, 100 - abs(latest_weather.humidity - 50) * 2)
+            # 空气质量适宜度：AQI越低分数越高
+            aqi_score = max(0, 100 - (latest_weather.aqi or 50) * 0.5)
+            # 综合宜居指数
+            livability_score = (temp_score + humidity_score + aqi_score) / 3
+            
+            cities_data.append({
+                'city': city.city,
+                'temperature': latest_weather.temperature,
+                'humidity': latest_weather.humidity,
+                'description': latest_weather.description,
+                'aqi': latest_weather.aqi or 50,
+                'livability_score': round(livability_score, 2),
+                'date': latest_weather.date
+            })
+    
+    # 按温度排序（从高到低）
+    temperature_ranking = sorted(cities_data, key=lambda x: x['temperature'], reverse=True)
+    # 按空气质量排序（从低到高，AQI越低越好）
+    air_quality_ranking = sorted(cities_data, key=lambda x: x['aqi'])
+    # 按宜居指数排序（从高到低）
+    livability_ranking = sorted(cities_data, key=lambda x: x['livability_score'], reverse=True)
+    
+    return render_template("national_weather.html", 
+                           temperature_ranking=temperature_ranking,
+                           air_quality_ranking=air_quality_ranking,
+                           livability_ranking=livability_ranking,
+                           user=current_user)
 

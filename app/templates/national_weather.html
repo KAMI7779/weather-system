@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}全国气象{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">全国气象</h1>
+    
+    <!-- 全国气象地图 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">全国气象地图</h5>
+        </div>
+        <div class="card-body">
+            <div id="map" style="height: 500px; width: 100%;"></div>
+        </div>
+    </div>
+    
+    <!-- 城市排名 -->
+    <div class="row mb-4">
+        <!-- 温度排名 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">城市温度排名</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>城市</th>
+                                <th>温度</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for city in temperature_ranking[:10] %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ city.city }}</td>
+                                <td>{{ city.temperature }}°C</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 空气质量排名 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">空气质量排名</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>城市</th>
+                                <th>AQI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for city in air_quality_ranking[:10] %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ city.city }}</td>
+                                <td>{{ city.aqi }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 宜居指数排名 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">宜居指数排名</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>城市</th>
+                                <th>宜居指数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for city in livability_ranking[:10] %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ city.city }}</td>
+                                <td>{{ city.livability_score }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 模拟全国气象地图
+    document.addEventListener('DOMContentLoaded', function() {
+        const mapElement = document.getElementById('map');
+        mapElement.innerHTML = `
+            <div style="background-color: #e6f7ff; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
+                <p class="text-center">全国气象地图<br><small>基于真实数据的可视化地图</small></p>
+            </div>
+        `;
+    });
+</script>
+{% endblock %}

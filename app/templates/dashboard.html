@@ -42,83 +42,106 @@
         </div>
     </div>
     
-    <!-- 地图和排行榜 -->
-    <div class="row">
-        <!-- 地图 -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">全国气象概览</h5>
-                </div>
-                <div class="card-body">
-                    <div id="map" style="height: 400px; width: 100%;"></div>
-                </div>
-            </div>
+    <!-- 默认城市信息 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">{{ default_city }} 天气信息</h5>
         </div>
-        
-        <!-- 城市温度排行榜 -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">城市温度排行</h5>
+        <div class="card-body">
+            <div class="row">
+                <!-- 实时天气 -->
+                {% if life_index_data %}
+                <div class="col-md-4">
+                    <h6>实时天气</h6>
+                    <p>温度: {{ life_index_data.weather.temperature }}°C</p>
+                    <p>湿度: {{ life_index_data.weather.humidity }}%</p>
+                    <p>天气: {{ life_index_data.weather.description }}</p>
+                    <p>风力: {{ life_index_data.weather.wind_speed }} km/h {{ life_index_data.weather.wind_dir }}</p>
+                    <p>能见度: {{ life_index_data.weather.visibility }} km</p>
                 </div>
-                <div class="card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>排名</th>
-                                <th>城市</th>
-                                <th>温度</th>
-                                <th>湿度</th>
-                                <th>天气</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for city in cities_data[:10] %}
-                            <tr>
-                                <td>{{ loop.index }}</td>
-                                <td>{{ city.city }}</td>
-                                <td>{{ city.temperature }}°C</td>
-                                <td>{{ city.humidity }}%</td>
-                                <td>{{ city.description }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                {% endif %}
+                
+                <!-- 生活指数 -->
+                {% if life_index_data %}
+                <div class="col-md-4">
+                    <h6>生活指数</h6>
+                    <p>穿衣: {{ life_index_data.clothing.level }} - {{ life_index_data.clothing.advice }}</p>
+                    <p>运动: {{ life_index_data.sport.level }} - {{ life_index_data.sport.advice }}</p>
+                    <p>紫外线: {{ life_index_data.uv.level }} - {{ life_index_data.uv.advice }}</p>
+                    <p>感冒: {{ life_index_data.cold.level }} - {{ life_index_data.cold.advice }}</p>
+                    <p>洗车: {{ life_index_data.car_wash.level }} - {{ life_index_data.car_wash.advice }}</p>
                 </div>
+                {% endif %}
+                
+                <!-- 空气质量 -->
+                {% if air_quality_data %}
+                <div class="col-md-4">
+                    <h6>空气质量</h6>
+                    <p>AQI: {{ air_quality_data.aqi }}</p>
+                    <p>PM2.5: {{ air_quality_data.pm25 }}</p>
+                    <p>PM10: {{ air_quality_data.pm10 }}</p>
+                    <p>O3: {{ air_quality_data.o3 }}</p>
+                    <p>NO2: {{ air_quality_data.no2 }}</p>
+                    <p>SO2: {{ air_quality_data.so2 }}</p>
+                    <p>CO: {{ air_quality_data.co }}</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
     
-    <!-- 空气质量排行 -->
+    <!-- 未来天气预报 -->
+    {% if forecast_data %}
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="card-title">空气质量排行</h5>
+            <h5 class="card-title">{{ default_city }} 7天天气预报</h5>
         </div>
         <div class="card-body">
-            <div id="air-quality-chart" style="height: 300px;"></div>
+            <div class="row">
+                {% for day in forecast_data %}
+                <div class="col-md-1">
+                    <div class="text-center">
+                        <p class="font-weight-bold">{{ day.date }}</p>
+                        <p>{{ day.max_temp }}°C</p>
+                        <p>{{ day.min_temp }}°C</p>
+                        <p>{{ day.description }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 城市温度排行榜 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">城市温度排行</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>城市</th>
+                        <th>温度</th>
+                        <th>湿度</th>
+                        <th>天气</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for city in cities_data[:10] %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ city.city }}</td>
+                        <td>{{ city.temperature }}°C</td>
+                        <td>{{ city.humidity }}%</td>
+                        <td>{{ city.description }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-
-<script>
-    // 模拟地图数据
-    document.addEventListener('DOMContentLoaded', function() {
-        // 简单的地图模拟
-        const mapElement = document.getElementById('map');
-        mapElement.innerHTML = `
-            <div style="background-color: #e6f7ff; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
-                <p class="text-center">全国气象地图<br><small>基于真实数据的可视化地图</small></p>
-            </div>
-        `;
-        
-        // 模拟空气质量图表
-        const airQualityChart = document.getElementById('air-quality-chart');
-        airQualityChart.innerHTML = `
-            <div style="background-color: #f5f5f5; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 5px;">
-                <p class="text-center">空气质量排行榜<br><small>基于真实数据的图表</small></p>
-            </div>
-        `;
-    });
-</script>
 {% endblock %}
