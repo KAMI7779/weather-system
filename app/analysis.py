@@ -18,7 +18,12 @@ def basic_stats():
             "max_temp": 0,
             "min_temp": 0,
             "avg_temp": 0,
-            "avg_humidity": 0
+            "avg_humidity": 0,
+            "temp_range": 0,
+            "humidity_range": 0,
+            "temp_change_rate": 0,
+            "humidity_change_rate": 0,
+            "record_count": 0
         }
     
     temperatures = [record.temperature for record in records]
@@ -28,12 +33,26 @@ def basic_stats():
     min_temp = min(temperatures)
     avg_temp = round(sum(temperatures) / len(temperatures), 2)
     avg_humidity = round(sum(humidities) / len(humidities), 1)
+    temp_range = round(max_temp - min_temp, 2)
+    humidity_range = max(humidities) - min(humidities)
+    
+    # 计算变化率
+    temp_change_rate = 0
+    humidity_change_rate = 0
+    if len(temperatures) > 1:
+        temp_change_rate = round((temperatures[-1] - temperatures[0]) / len(temperatures), 2)
+        humidity_change_rate = round((humidities[-1] - humidities[0]) / len(humidities), 2)
     
     return {
         "max_temp": max_temp,
         "min_temp": min_temp,
         "avg_temp": avg_temp,
-        "avg_humidity": avg_humidity
+        "avg_humidity": avg_humidity,
+        "temp_range": temp_range,
+        "humidity_range": humidity_range,
+        "temp_change_rate": temp_change_rate,
+        "humidity_change_rate": humidity_change_rate,
+        "record_count": len(records)
     }
 
 def temp_trend():

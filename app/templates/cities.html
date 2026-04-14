@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}城市管理{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🏙️ 城市管理</h2>
+    
+    <form method="post">
+        <div class="form-group">
+            <label for="city_name">添加城市</label>
+            <input type="text" id="city_name" name="city_name" placeholder="输入城市名称" required>
+        </div>
+        <button type="submit" name="add_city">添加城市</button>
+    </form>
+    
+    {% if cities %}
+    <div class="cities-list">
+        <h3>我的城市列表</h3>
+        <div class="cities-grid">
+            {% for city in cities %}
+            <div class="city-card">
+                <div class="city-info">
+                    <h4>{{ city.name }}</h4>
+                    {% if city.is_default %}
+                    <span class="default-badge">默认</span>
+                    {% endif %}
+                </div>
+                <div class="city-actions">
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="city_id" value="{{ city.id }}">
+                        <button type="submit" name="set_default" {% if city.is_default %}disabled{% endif %}>
+                            {% if city.is_default %}已默认{% else %}设为默认{% endif %}
+                        </button>
+                    </form>
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="city_id" value="{{ city.id }}">
+                        <button type="submit" name="delete_city" class="delete-btn">删除</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <p>您还没有添加任何城市，添加城市后可以快速查询天气。</p>
+    {% endif %}
+</div>
+{% endblock %}
