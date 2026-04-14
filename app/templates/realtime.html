@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}实时天气{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🌍 实时天气查询</h2>
+
+    <form method="post">
+        <div class="form-group">
+            <label for="city">城市名称</label>
+            <input type="text" id="city" name="city" placeholder="输入城市（如 北京）" required>
+        </div>
+        <button type="submit">查询天气</button>
+    </form>
+
+    {% if weather %}
+    <div class="weather-card">
+        <h3 class="weather-city">{{ weather.city }}</h3>
+        <p class="weather-temp">{{ weather.temperature }} °C</p>
+        <p class="weather-desc">{{ weather.description }}</p>
+        <p class="weather-humidity">湿度：{{ weather.humidity }}%</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

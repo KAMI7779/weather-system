@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+{% if user %}
+<div class="nav">
+    <div class="container">
+        <h1>天气数据分析系统</h1>
+        <div class="nav-links">
+            <span>{{ user.username }}</span>
+            <a href="/">首页</a>
+            <a href="/chart">温度</a>
+            <a href="/humidity-chart">湿度</a>
+            <a href="/combined-chart">对比</a>
+            <a href="/realtime">实时</a>
+            <a href="/logout">退出</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="container">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="flash-message">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
+

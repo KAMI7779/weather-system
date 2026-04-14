@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}首页{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📊 天气统计概览</h2>
+
+    <div class="stats">
+        <div class="stat">
+            <h3>最高温度</h3>
+            <p class="stat-value">{{ stats.max_temp }} °C</p>
+        </div>
+        <div class="stat">
+            <h3>最低温度</h3>
+            <p class="stat-value">{{ stats.min_temp }} °C</p>
+        </div>
+        <div class="stat">
+            <h3>平均温度</h3>
+            <p class="stat-value">{{ stats.avg_temp }} °C</p>
+        </div>
+        <div class="stat">
+            <h3>平均湿度</h3>
+            <p class="stat-value">{{ stats.avg_humidity }} %</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>📈 最近天气趋势</h2>
+    <p>系统已记录天气数据，您可以通过温度、湿度和对比页面查看详细趋势。</p>
+</div>
+{% endblock %}
+

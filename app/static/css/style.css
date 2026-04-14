@@ -1,0 +1,302 @@
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", "PingFang SC", sans-serif;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #f5f7fb, #e3e7f8);
+    color: #333;
+    line-height: 1.6;
+}
+
+a {
+    text-decoration: none;
+    color: #4f6ef7;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #3a58d6;
+}
+
+.container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 30px 0;
+}
+
+/* 顶部导航 */
+.nav {
+    background: linear-gradient(135deg, #4f6ef7, #6a8bff);
+    color: white;
+    padding: 15px 0;
+    box-shadow: 0 2px 10px rgba(79, 110, 247, 0.3);
+}
+
+.nav .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.nav h1 {
+    font-size: 24px;
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.nav h1::before {
+    content: "🌤️";
+    margin-right: 10px;
+    font-size: 28px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 20px;
+}
+
+.nav a {
+    color: white;
+    margin-left: 0;
+    font-weight: 500;
+    position: relative;
+    padding: 5px 0;
+}
+
+.nav a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: white;
+    transition: width 0.3s ease;
+}
+
+.nav a:hover::after {
+    width: 100%;
+}
+
+/* 卡片 */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+/* 统计卡片 */
+.stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    flex: 1;
+    min-width: 200px;
+    background: linear-gradient(135deg, #4f6ef7, #6a8bff);
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 8px 20px rgba(79, 110, 247, 0.2);
+}
+
+.stat:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(79, 110, 247, 0.3);
+}
+
+.stat h3 {
+    margin: 0 0 15px;
+    font-weight: normal;
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* 表单 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+input {
+    width: 100%;
+    padding: 14px;
+    margin-top: 5px;
+    border-radius: 8px;
+    border: 2px solid #e1e5f2;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-size: 16px;
+}
+
+input:focus {
+    outline: none;
+    border-color: #4f6ef7;
+    box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
+}
+
+button {
+    margin-top: 20px;
+    padding: 14px 30px;
+    background: linear-gradient(135deg, #4f6ef7, #6a8bff);
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 15px rgba(79, 110, 247, 0.3);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 110, 247, 0.4);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* 图片 */
+.chart-img {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.chart-img:hover {
+    transform: scale(1.02);
+}
+
+/* 登录注册居中 */
+.center-box {
+    width: 90%;
+    max-width: 400px;
+    margin: 100px auto;
+}
+
+/* 天气卡片 */
+.weather-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.weather-city {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0 0 10px;
+}
+
+.weather-temp {
+    font-size: 64px;
+    font-weight: 700;
+    margin: 20px 0;
+}
+
+.weather-desc {
+    font-size: 18px;
+    margin: 10px 0;
+    text-transform: capitalize;
+}
+
+.weather-humidity {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .nav .container {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .stats {
+        flex-direction: column;
+    }
+    
+    .stat {
+        min-width: 100%;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .weather-temp {
+        font-size: 48px;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #4f6ef7;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 消息提示 */
+.flash-message {
+    background: #e8f5e8;
+    color: #2e7d32;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #4caf50;
+}
+
+.flash-error {
+    background: #ffebee;
+    color: #c62828;
+    border-left: 4px solid #f44336;
+}
+
