@@ -15,7 +15,7 @@ API_KEY = 'd9d45f4a9e1c4b5a9f81234567890123'
 # 先设置数据库URI，再初始化db
 try:
     # 尝试连接MySQL数据库
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/weather_system'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/weather_system?charset=utf8mb4'
     db.init_app(app)
     
     with app.app_context():
