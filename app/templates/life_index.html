@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}生活指数推荐{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📊 生活指数推荐</h2>
+
+    <form method="post">
+        <div class="form-group">
+            <label for="city">城市名称</label>
+            <input type="text" id="city" name="city" placeholder="输入城市（如 北京）" required>
+        </div>
+        <button type="submit">查询生活指数</button>
+    </form>
+
+    {% if life_index_data %}
+    <div class="life-index-container">
+        <h3>{{ life_index_data.city }} 生活指数</h3>
+        
+        <!-- 天气概况 -->
+        <div class="weather-overview">
+            <h4>天气概况</h4>
+            <div class="weather-info">
+                <div class="weather-item">
+                    <span class="weather-label">温度:</span>
+                    <span class="weather-value">{{ life_index_data.weather.temperature }} °C</span>
+                </div>
+                <div class="weather-item">
+                    <span class="weather-label">湿度:</span>
+                    <span class="weather-value">{{ life_index_data.weather.humidity }}%</span>
+                </div>
+                <div class="weather-item">
+                    <span class="weather-label">天气:</span>
+                    <span class="weather-value">{{ life_index_data.weather.description }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 生活指数卡片 -->
+        <div class="index-cards">
+            <!-- 穿衣指数 -->
+            <div class="index-card">
+                <div class="index-icon">👕</div>
+                <h5>穿衣指数</h5>
+                <div class="index-level">{{ life_index_data.clothing.level }}</div>
+                <p class="index-advice">{{ life_index_data.clothing.advice }}</p>
+            </div>
+            
+            <!-- 运动指数 -->
+            <div class="index-card">
+                <div class="index-icon">🏃</div>
+                <h5>运动指数</h5>
+                <div class="index-level">{{ life_index_data.sport.level }}</div>
+                <p class="index-advice">{{ life_index_data.sport.advice }}</p>
+            </div>
+            
+            <!-- 紫外线指数 -->
+            <div class="index-card">
+                <div class="index-icon">☀️</div>
+                <h5>紫外线指数</h5>
+                <div class="index-level">{{ life_index_data.uv.level }}</div>
+                <p class="index-advice">{{ life_index_data.uv.advice }}</p>
+            </div>
+            
+            <!-- 感冒指数 -->
+            <div class="index-card">
+                <div class="index-icon">🤧</div>
+                <h5>感冒指数</h5>
+                <div class="index-level">{{ life_index_data.cold.level }}</div>
+                <p class="index-advice">{{ life_index_data.cold.advice }}</p>
+            </div>
+            
+            <!-- 洗车指数 -->
+            <div class="index-card">
+                <div class="index-icon">🚗</div>
+                <h5>洗车指数</h5>
+                <div class="index-level">{{ life_index_data.car_wash.level }}</div>
+                <p class="index-advice">{{ life_index_data.car_wash.advice }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .life-index-container {
+        margin-top: 30px;
+    }
+    
+    .weather-overview {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .weather-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-top: 15px;
+    }
+    
+    .weather-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .weather-label {
+        font-weight: bold;
+        color: #666;
+    }
+    
+    .weather-value {
+        color: #333;
+    }
+    
+    .index-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .index-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .index-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .index-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .index-card h5 {
+        margin: 0 0 10px 0;
+        color: #333;
+    }
+    
+    .index-level {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #007bff;
+    }
+    
+    .index-advice {
+        font-size: 14px;
+        line-height: 1.4;
+        color: #666;
+        margin: 0;
+    }
+</style>
+{% endblock %}

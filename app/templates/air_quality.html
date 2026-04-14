@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}空气质量监测{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🌫️ 空气质量监测</h2>
+
+    <form method="post">
+        <div class="form-group">
+            <label for="city">城市名称</label>
+            <input type="text" id="city" name="city" placeholder="输入城市（如 北京）" required>
+        </div>
+        <button type="submit">查询空气质量</button>
+    </form>
+
+    {% if air_quality_data %}
+    <div class="air-quality-container">
+        <h3>{{ air_quality_data.city }} 空气质量</h3>
+        
+        <!-- AQI指数卡片 -->
+        <div class="aqi-card">
+            <h4>空气质量指数 (AQI)</h4>
+            <div class="aqi-value" style="background-color: {{ 'green' if air_quality_data.aqi <= 50 else 'yellow' if air_quality_data.aqi <= 100 else 'orange' if air_quality_data.aqi <= 150 else 'red' if air_quality_data.aqi <= 200 else 'purple' }}">
+                {{ air_quality_data.aqi }}
+            </div>
+            <div class="aqi-level">
+                {% if air_quality_data.aqi <= 50 %}
+                优
+                {% elif air_quality_data.aqi <= 100 %}
+                良
+                {% elif air_quality_data.aqi <= 150 %}
+                轻度污染
+                {% elif air_quality_data.aqi <= 200 %}
+                中度污染
+                {% else %}
+                重度污染
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 污染物数据 -->
+        <div class="pollutants">
+            <h4>污染物浓度</h4>
+            <div class="pollutant-grid">
+                <div class="pollutant-item">
+                    <span class="pollutant-name">PM2.5</span>
+                    <span class="pollutant-value">{{ air_quality_data.pm25 | round(1) }} μg/m³</span>
+                </div>
+                <div class="pollutant-item">
+                    <span class="pollutant-name">PM10</span>
+                    <span class="pollutant-value">{{ air_quality_data.pm10 | round(1) }} μg/m³</span>
+                </div>
+                <div class="pollutant-item">
+                    <span class="pollutant-name">O₃</span>
+                    <span class="pollutant-value">{{ air_quality_data.o3 | round(1) }} μg/m³</span>
+                </div>
+                <div class="pollutant-item">
+                    <span class="pollutant-name">NO₂</span>
+                    <span class="pollutant-value">{{ air_quality_data.no2 | round(1) }} μg/m³</span>
+                </div>
+                <div class="pollutant-item">
+                    <span class="pollutant-name">SO₂</span>
+                    <span class="pollutant-value">{{ air_quality_data.so2 | round(1) }} μg/m³</span>
+                </div>
+                <div class="pollutant-item">
+                    <span class="pollutant-name">CO</span>
+                    <span class="pollutant-value">{{ air_quality_data.co | round(2) }} mg/m³</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 健康建议 -->
+        <div class="health-advice">
+            <h4>健康建议</h4>
+            <div class="advice-content">
+                {% if air_quality_data.aqi <= 50 %}
+                <p>空气质量优，非常适合户外活动，建议多进行户外运动。</p>
+                {% elif air_quality_data.aqi <= 100 %}
+                <p>空气质量良好，适合大部分人群户外活动，敏感人群应减少长时间高强度运动。</p>
+                {% elif air_quality_data.aqi <= 150 %}
+                <p>空气质量轻度污染，敏感人群应减少户外活动，一般人群可正常活动。</p>
+                {% elif air_quality_data.aqi <= 200 %}
+                <p>空气质量中度污染，敏感人群应避免户外活动，一般人群应减少户外活动。</p>
+                {% else %}
+                <p>空气质量重度污染，所有人群应避免户外活动，尽量待在室内。</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 空气质量趋势图 -->
+        <div class="chart-container">
+            <h4>污染物浓度对比</h4>
+            <canvas id="airQualityChart" width="600" height="300"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // 绘制空气质量图表
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if air_quality_data %}
+        const canvas = document.getElementById('airQualityChart');
+        const ctx = canvas.getContext('2d');
+        
+        const pollutants = ['PM2.5', 'PM10', 'O₃', 'NO₂', 'SO₂', 'CO'];
+        const values = [
+            {{ air_quality_data.pm25 }},
+            {{ air_quality_data.pm10 }},
+            {{ air_quality_data.o3 }},
+            {{ air_quality_data.no2 }},
+            {{ air_quality_data.so2 }},
+            {{ air_quality_data.co }}
+        ];
+        
+        const colors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'];
+        
+        // 绘制柱状图
+        const barWidth = canvas.width / (values.length * 2);
+        values.forEach((value, index) => {
+            const x = 50 + index * barWidth * 2;
+            const height = value * 2;
+            const y = canvas.height - 50 - height;
+            
+            ctx.fillStyle = colors[index];
+            ctx.fillRect(x, y, barWidth, height);
+            
+            // 添加标签
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(pollutants[index], x + barWidth/2, canvas.height - 20);
+            ctx.fillText(value.toFixed(1), x + barWidth/2, y - 10);
+        });
+        
+        // 添加标题
+        ctx.fillStyle = '#333';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('污染物浓度对比', canvas.width/2, 30);
+        {% endif %}
+    });
+</script>
+
+<style>
+    .air-quality-container {
+        margin-top: 30px;
+    }
+    
+    .aqi-card {
+        text-align: center;
+        margin-bottom: 30px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .aqi-value {
+        display: inline-block;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        color: white;
+        font-size: 36px;
+        font-weight: bold;
+        line-height: 100px;
+        margin: 20px 0;
+    }
+    
+    .aqi-level {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    
+    .pollutants {
+        margin-bottom: 30px;
+    }
+    
+    .pollutant-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .pollutant-item {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .pollutant-name {
+        display: block;
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .pollutant-value {
+        display: block;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .health-advice {
+        background-color: #e3f2fd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .advice-content {
+        margin-top: 10px;
+        line-height: 1.5;
+    }
+    
+    .chart-container {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

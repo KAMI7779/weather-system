@@ -49,6 +49,23 @@
             <p class="stat-value">{{ stats.record_count }} 条</p>
         </div>
     </div>
+    
+    {% if records %}
+    <!-- 历史趋势图表 -->
+    <div class="chart-container" style="margin-top: 30px;">
+        <h3>历史趋势</h3>
+        <div class="charts">
+            <div class="chart">
+                <h4>温度趋势</h4>
+                <canvas id="tempHistoryChart" width="400" height="200"></canvas>
+            </div>
+            <div class="chart">
+                <h4>湿度趋势</h4>
+                <canvas id="humidityHistoryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
     
     {% if records %}
@@ -85,4 +102,97 @@
     {% endif %}
     {% endif %}
 </div>
+
+<script>
+    // 绘制历史趋势图表
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if records %}
+        const dates = [];
+        const temperatures = [];
+        const humidities = [];
+        
+        {% for record in records %}
+        dates.push('{{ record.date.strftime('%Y-%m-%d %H:%M') }}');
+        temperatures.push({{ record.temperature }});
+        humidities.push({{ record.humidity }});
+        {% endfor %}
+        
+        // 温度趋势图
+        const tempCanvas = document.getElementById('tempHistoryChart');
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (temperatures.length > 0) {
+            tempCtx.beginPath();
+            tempCtx.moveTo(50, 150 - (temperatures[0] * 3));
+            for (let i = 1; i < temperatures.length; i++) {
+                const x = 50 + (i * (tempCanvas.width - 100) / (temperatures.length - 1));
+                const y = 150 - (temperatures[i] * 3);
+                tempCtx.lineTo(x, y);
+            }
+            tempCtx.strokeStyle = '#ff6384';
+            tempCtx.lineWidth = 2;
+            tempCtx.stroke();
+            
+            // 添加数据点
+            for (let i = 0; i < temperatures.length; i++) {
+                const x = 50 + (i * (tempCanvas.width - 100) / (temperatures.length - 1));
+                const y = 150 - (temperatures[i] * 3);
+                tempCtx.beginPath();
+                tempCtx.arc(x, y, 3, 0, 2 * Math.PI);
+                tempCtx.fillStyle = '#ff6384';
+                tempCtx.fill();
+            }
+        }
+        
+        // 湿度趋势图
+        const humidityCanvas = document.getElementById('humidityHistoryChart');
+        const humidityCtx = humidityCanvas.getContext('2d');
+        
+        if (humidities.length > 0) {
+            humidityCtx.beginPath();
+            humidityCtx.moveTo(50, 150 - (humidities[0] * 1.5));
+            for (let i = 1; i < humidities.length; i++) {
+                const x = 50 + (i * (humidityCanvas.width - 100) / (humidities.length - 1));
+                const y = 150 - (humidities[i] * 1.5);
+                humidityCtx.lineTo(x, y);
+            }
+            humidityCtx.strokeStyle = '#36a2eb';
+            humidityCtx.lineWidth = 2;
+            humidityCtx.stroke();
+            
+            // 添加数据点
+            for (let i = 0; i < humidities.length; i++) {
+                const x = 50 + (i * (humidityCanvas.width - 100) / (humidities.length - 1));
+                const y = 150 - (humidities[i] * 1.5);
+                humidityCtx.beginPath();
+                humidityCtx.arc(x, y, 3, 0, 2 * Math.PI);
+                humidityCtx.fillStyle = '#36a2eb';
+                humidityCtx.fill();
+            }
+        }
+        {% endif %}
+    });
+</script>
+
+<style>
+    .charts {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .chart {
+        flex: 1 1 calc(50% - 10px);
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .chart h4 {
+        margin-top: 0;
+        color: #333;
+        text-align: center;
+    }
+</style>
 {% endblock %}

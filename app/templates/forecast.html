@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}未来天气预报{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🌤️ 未来天气预报</h2>
+
+    <form method="post">
+        <div class="form-group">
+            <label for="city">城市名称</label>
+            <input type="text" id="city" name="city" placeholder="输入城市（如 北京）" required>
+        </div>
+        <button type="submit">查询预报</button>
+    </form>
+
+    {% if forecast_data %}
+    <div class="forecast-container">
+        <h3>{{ city }} 未来7天天气预报</h3>
+        
+        <!-- 温度趋势图 -->
+        <div class="chart-container">
+            <canvas id="tempChart" width="400" height="200"></canvas>
+        </div>
+        
+        <!-- 预报卡片 -->
+        <div class="forecast-cards">
+            {% for day in forecast_data %}
+            <div class="forecast-card">
+                <h4>{{ day.date }}</h4>
+                <p class="forecast-temp">最高: {{ day.max_temp }}°C</p>
+                <p class="forecast-temp">最低: {{ day.min_temp }}°C</p>
+                <p class="forecast-desc">{{ day.description }}</p>
+                <p class="forecast-humidity">湿度: {{ day.humidity }}%</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // 温度趋势图
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if forecast_data %}
+        const dates = [];
+        const maxTemps = [];
+        const minTemps = [];
+        
+        {% for day in forecast_data %}
+        dates.push('{{ day.date }}');
+        maxTemps.push({{ day.max_temp }});
+        minTemps.push({{ day.min_temp }});
+        {% endfor %}
+        
+        const canvas = document.getElementById('tempChart');
+        const ctx = canvas.getContext('2d');
+        
+        // 绘制温度趋势图
+        ctx.beginPath();
+        ctx.moveTo(50, 150 - (maxTemps[0] * 3));
+        for (let i = 1; i < maxTemps.length; i++) {
+            ctx.lineTo(50 + (i * 50), 150 - (maxTemps[i] * 3));
+        }
+        ctx.strokeStyle = '#ff6384';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(50, 150 - (minTemps[0] * 3));
+        for (let i = 1; i < minTemps.length; i++) {
+            ctx.lineTo(50 + (i * 50), 150 - (minTemps[i] * 3));
+        }
+        ctx.strokeStyle = '#36a2eb';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // 添加图例
+        ctx.fillStyle = '#ff6384';
+        ctx.fillRect(30, 10, 10, 10);
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.fillText('最高温度', 45, 20);
+        
+        ctx.fillStyle = '#36a2eb';
+        ctx.fillRect(120, 10, 10, 10);
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.fillText('最低温度', 135, 20);
+        {% endif %}
+    });
+</script>
+
+<style>
+    .forecast-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .forecast-card {
+        flex: 1 1 calc(14.28% - 15px);
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .forecast-card h4 {
+        margin-top: 0;
+        color: #333;
+    }
+    
+    .forecast-temp {
+        font-size: 14px;
+        margin: 5px 0;
+    }
+    
+    .forecast-desc {
+        font-size: 12px;
+        color: #666;
+        margin: 5px 0;
+    }
+    
+    .forecast-humidity {
+        font-size: 12px;
+        color: #999;
+        margin: 5px 0;
+    }
+    
+    .chart-container {
+        margin: 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

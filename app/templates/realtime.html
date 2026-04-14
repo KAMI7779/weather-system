@@ -19,6 +19,10 @@
         <p class="weather-temp">{{ weather.temperature }} °C</p>
         <p class="weather-desc">{{ weather.description }}</p>
         <p class="weather-humidity">湿度：{{ weather.humidity }}%</p>
+        <p class="weather-details">体感温度：{{ weather.feels_like }} °C</p>
+        <p class="weather-details">风力：{{ weather.wind_speed }} km/h {{ weather.wind_dir }}</p>
+        <p class="weather-details">能见度：{{ weather.visibility }} km</p>
+        <p class="weather-details">气压：{{ weather.pressure }} hPa</p>
     </div>
     {% endif %}
 </div>

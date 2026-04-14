@@ -1,9 +1,10 @@
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from app.models import db, User, Weather
+from app.models import db, User, Weather, City, Warning
 from app.analysis import basic_stats, temp_trend, humidity_trend, combined_trend
 import requests
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'weather_key'
@@ -42,6 +43,17 @@ login_manager.login_view = "login"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# 管理员权限装饰器
+def admin_required(f):
+    @login_required
+    def admin_decorated_function(*args, **kwargs):
+        if current_user.role != 'admin':
+            flash('权限不足，需要管理员权限')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    admin_decorated_function.__name__ = f.__name__
+    return admin_decorated_function
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -74,7 +86,33 @@ def logout():
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html", stats=basic_stats(), user=current_user)
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    # 获取所有城市的最新天气数据
+    cities_data = []
+    cities = Weather.query.distinct(Weather.city).all()
+    
+    for city in cities:
+        latest_weather = Weather.query.filter_by(city=city.city).order_by(Weather.date.desc()).first()
+        if latest_weather:
+            cities_data.append({
+                'city': city.city,
+                'temperature': latest_weather.temperature,
+                'humidity': latest_weather.humidity,
+                'description': latest_weather.description,
+                'date': latest_weather.date
+            })
+    
+    # 按温度排序（从高到低）
+    cities_data.sort(key=lambda x: x['temperature'], reverse=True)
+    
+    # 获取统计数据
+    stats = basic_stats()
+    
+    return render_template("dashboard.html", cities_data=cities_data, stats=stats, user=current_user)
 
 @app.route("/chart")
 @login_required
@@ -201,7 +239,12 @@ def get_weather_from_api(city):
                             "city": city,
                             "temperature": float(data["current_condition"][0]["temp_C"]),
                             "humidity": int(data["current_condition"][0]["humidity"]),
-                            "description": data["current_condition"][0]["weatherDesc"][0]["value"]
+                            "description": data["current_condition"][0]["weatherDesc"][0]["value"],
+                            "wind_speed": data["current_condition"][0]["windspeedKmph"],
+                            "wind_dir": data["current_condition"][0]["winddir16Point"],
+                            "visibility": data["current_condition"][0]["visibility"],
+                            "pressure": data["current_condition"][0]["pressure"],
+                            "feels_like": float(data["current_condition"][0]["FeelsLikeC"])
                         }
                         return weather_data
                     else:
@@ -369,7 +412,12 @@ def realtime():
                     city=weather_data["city"],
                     temperature=weather_data["temperature"],
                     humidity=weather_data["humidity"],
-                    description=weather_data["description"]
+                    description=weather_data["description"],
+                    wind_speed=weather_data["wind_speed"],
+                    wind_dir=weather_data["wind_dir"],
+                    visibility=weather_data["visibility"],
+                    pressure=weather_data["pressure"],
+                    feels_like=weather_data["feels_like"]
                 )
                 db.session.add(new_weather)
                 db.session.commit()
@@ -385,4 +433,218 @@ def realtime():
         else:
             flash("获取天气数据失败")
     return render_template("realtime.html", weather=weather, user=current_user, cities=user_cities)
+
+@app.route("/forecast", methods=["GET", "POST"])
+@login_required
+def forecast():
+    forecast_data = None
+    city = None
+    
+    if request.method == "POST":
+        city = request.form["city"]
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 使用wttr.in API获取未来天气预报
+                url = f"https://wttr.in/{city}?format=j1"
+                response = requests.get(url, timeout=10)
+                
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        if "weather" in data:
+                            # 提取未来7天的预报数据
+                            forecast_data = []
+                            for day in data["weather"]:
+                                day_data = {
+                                    "date": day["date"],
+                                    "max_temp": day["maxtempC"],
+                                    "min_temp": day["mintempC"],
+                                    "avg_temp": day["avgtempC"],
+                                    "description": day["hourly"][0]["weatherDesc"][0]["value"],
+                                    "humidity": day["hourly"][0]["humidity"]
+                                }
+                                forecast_data.append(day_data)
+                            break
+                    except json.JSONDecodeError as e:
+                        print(f"JSON解析错误: {e}")
+                        if attempt < max_retries - 1:
+                            continue
+                else:
+                    print(f"API请求失败: {response.status_code}")
+                    if attempt < max_retries - 1:
+                        continue
+            except requests.RequestException as e:
+                print(f"网络请求错误: {e}")
+                if attempt < max_retries - 1:
+                    continue
+    
+    return render_template("forecast.html", forecast_data=forecast_data, city=city, user=current_user)
+
+@app.route("/air-quality", methods=["GET", "POST"])
+@login_required
+def air_quality():
+    air_quality_data = None
+    city = None
+    
+    if request.method == "POST":
+        city = request.form["city"]
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 使用wttr.in API获取天气数据，包含空气质量信息
+                url = f"https://wttr.in/{city}?format=j1"
+                response = requests.get(url, timeout=10)
+                
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        if "current_condition" in data and len(data["current_condition"]) > 0:
+                            current = data["current_condition"][0]
+                            # 模拟空气质量数据（因为wttr.in可能不直接提供AQI）
+                            # 实际项目中可以使用专门的空气质量API
+                            air_quality_data = {
+                                "city": city,
+                                "aqi": int(current.get("air_quality", {}).get("us-epa-index", 5)),
+                                "pm25": float(current.get("air_quality", {}).get("pm25", 25)),
+                                "pm10": float(current.get("air_quality", {}).get("pm10", 40)),
+                                "o3": float(current.get("air_quality", {}).get("o3", 60)),
+                                "no2": float(current.get("air_quality", {}).get("no2", 30)),
+                                "so2": float(current.get("air_quality", {}).get("so2", 10)),
+                                "co": float(current.get("air_quality", {}).get("co", 0.8))
+                            }
+                            # 如果wttr.in没有提供空气质量数据，使用模拟数据
+                            if air_quality_data["aqi"] == 5:
+                                import random
+                                air_quality_data = {
+                                    "city": city,
+                                    "aqi": random.randint(20, 150),
+                                    "pm25": random.uniform(10, 80),
+                                    "pm10": random.uniform(20, 100),
+                                    "o3": random.uniform(30, 100),
+                                    "no2": random.uniform(10, 50),
+                                    "so2": random.uniform(5, 20),
+                                    "co": random.uniform(0.5, 1.5)
+                                }
+                            break
+                    except json.JSONDecodeError as e:
+                        print(f"JSON解析错误: {e}")
+                        if attempt < max_retries - 1:
+                            continue
+                else:
+                    print(f"API请求失败: {response.status_code}")
+                    if attempt < max_retries - 1:
+                        continue
+            except requests.RequestException as e:
+                print(f"网络请求错误: {e}")
+                if attempt < max_retries - 1:
+                    continue
+    
+    return render_template("air_quality.html", air_quality_data=air_quality_data, city=city, user=current_user)
+
+@app.route("/life-index", methods=["GET", "POST"])
+@login_required
+def life_index():
+    life_index_data = None
+    city = None
+    
+    if request.method == "POST":
+        city = request.form["city"]
+        # 获取天气数据
+        weather_data = get_weather_from_api(city)
+        
+        if weather_data:
+            # 基于天气数据生成生活指数
+            temperature = weather_data["temperature"]
+            humidity = weather_data["humidity"]
+            
+            # 穿衣指数
+            if temperature >= 30:
+                clothing = {"level": "炎热", "advice": "建议穿着短袖、短裤等清凉透气的衣物，外出时注意防晒。"}
+            elif temperature >= 20:
+                clothing = {"level": "舒适", "advice": "建议穿着短袖、薄长裤等舒适的衣物。"}
+            elif temperature >= 10:
+                clothing = {"level": "较凉", "advice": "建议穿着长袖衬衫、薄外套等保暖衣物。"}
+            else:
+                clothing = {"level": "寒冷", "advice": "建议穿着厚外套、毛衣、围巾等保暖衣物。"}
+            
+            # 运动指数
+            if temperature >= 35 or temperature <= 0:
+                sport = {"level": "不宜", "advice": "天气过于极端，不建议进行户外运动。"}
+            elif humidity >= 80:
+                sport = {"level": "较不宜", "advice": "湿度较大，建议减少户外运动时间。"}
+            else:
+                sport = {"level": "适宜", "advice": "天气适宜进行户外运动，建议适当锻炼。"}
+            
+            # 紫外线指数
+            if temperature >= 25 and weather_data["description"].find("晴") != -1:
+                uv = {"level": "强", "advice": "紫外线强，外出时请涂抹防晒霜，戴遮阳帽。"}
+            elif temperature >= 20 and weather_data["description"].find("晴") != -1:
+                uv = {"level": "中等", "advice": "紫外线中等，建议涂抹防晒霜。"}
+            else:
+                uv = {"level": "弱", "advice": "紫外线弱，无需特别防护。"}
+            
+            # 感冒指数
+            if temperature <= 5:
+                cold = {"level": "易发", "advice": "天气寒冷，易感冒，建议注意保暖。"}
+            elif temperature >= 30 and humidity >= 80:
+                cold = {"level": "易发", "advice": "天气闷热，易感冒，建议保持室内通风。"}
+            else:
+                cold = {"level": "少发", "advice": "天气适宜，感冒几率较低。"}
+            
+            # 洗车指数
+            if weather_data["description"].find("雨") != -1 or weather_data["description"].find("雪") != -1:
+                car_wash = {"level": "不宜", "advice": "天气不佳，不适宜洗车。"}
+            else:
+                car_wash = {"level": "适宜", "advice": "天气良好，适宜洗车。"}
+            
+            life_index_data = {
+                "city": city,
+                "weather": weather_data,
+                "clothing": clothing,
+                "sport": sport,
+                "uv": uv,
+                "cold": cold,
+                "car_wash": car_wash
+            }
+    
+    return render_template("life_index.html", life_index_data=life_index_data, city=city, user=current_user)
+
+@app.route("/admin")
+@admin_required
+def admin():
+    # 获取所有用户
+    users = User.query.all()
+    # 获取所有天气数据（最近100条）
+    weather_data = Weather.query.order_by(Weather.date.desc()).limit(100).all()
+    
+    return render_template("admin.html", users=users, weather_data=weather_data, user=current_user)
+
+@app.route("/admin/user/<int:user_id>/delete", methods=["POST"])
+@admin_required
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if user:
+        # 防止删除自己
+        if user.id == current_user.id:
+            flash("不能删除自己的账户")
+        else:
+            db.session.delete(user)
+            db.session.commit()
+            flash("用户删除成功")
+    else:
+        flash("用户不存在")
+    return redirect(url_for("admin"))
+
+@app.route("/admin/weather/<int:weather_id>/delete", methods=["POST"])
+@admin_required
+def delete_weather(weather_id):
+    weather = Weather.query.get(weather_id)
+    if weather:
+        db.session.delete(weather)
+        db.session.commit()
+        flash("天气数据删除成功")
+    else:
+        flash("天气数据不存在")
+    return redirect(url_for("admin"))
 

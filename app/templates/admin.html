@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}管理员后台{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🔧 管理员后台</h2>
+    
+    <!-- 用户管理 -->
+    <div class="admin-section">
+        <h3>用户管理</h3>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th>角色</th>
+                        <th>注册时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>{{ user.create_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('确定要删除这个用户吗？');">
+                                <button type="submit" class="delete-btn">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 天气数据管理 -->
+    <div class="admin-section">
+        <h3>天气数据管理</h3>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>城市</th>
+                        <th>温度</th>
+                        <th>湿度</th>
+                        <th>天气状况</th>
+                        <th>记录时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for weather in weather_data %}
+                    <tr>
+                        <td>{{ weather.id }}</td>
+                        <td>{{ weather.city }}</td>
+                        <td>{{ weather.temperature }} °C</td>
+                        <td>{{ weather.humidity }}%</td>
+                        <td>{{ weather.description }}</td>
+                        <td>{{ weather.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('delete_weather', weather_id=weather.id) }}" onsubmit="return confirm('确定要删除这条天气数据吗？');">
+                                <button type="submit" class="delete-btn">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-section {
+        margin-top: 30px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .admin-section h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #333;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .admin-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .admin-table tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .delete-btn:hover {
+        background-color: #c82333;
+    }
+</style>
+{% endblock %}

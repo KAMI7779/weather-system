@@ -14,14 +14,20 @@
         <h1>天气数据分析系统</h1>
         <div class="nav-links">
             <span>{{ user.username }}</span>
-            <a href="/">首页</a>
+            <a href="/">数据大屏</a>
             <a href="/chart">温度</a>
             <a href="/humidity-chart">湿度</a>
             <a href="/combined-chart">对比</a>
             <a href="/realtime">实时</a>
+            <a href="/forecast">未来预报</a>
+            <a href="/air-quality">空气质量</a>
+            <a href="/life-index">生活指数</a>
             <a href="/cities">城市管理</a>
             <a href="/history">历史数据</a>
             <a href="/warnings">预警管理</a>
+            {% if user.role == 'admin' %}
+            <a href="/admin">管理员后台</a>
+            {% endif %}
             <a href="/logout">退出</a>
         </div>
     </div>
