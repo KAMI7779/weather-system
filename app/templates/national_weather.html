@@ -113,54 +113,54 @@
         // 初始化地图
         const mapChart = echarts.init(document.getElementById('map'));
         
-        // 从服务器获取的城市温度数据
-        const temperatureData = [
-            {name: '北京', value: 18},
-            {name: '上海', value: 22},
-            {name: '广州', value: 26},
-            {name: '深圳', value: 25},
-            {name: '杭州', value: 21},
-            {name: '南京', value: 20},
-            {name: '武汉', value: 23},
-            {name: '成都', value: 19},
-            {name: '重庆', value: 24},
-            {name: '西安', value: 17},
-            {name: '天津', value: 18},
-            {name: '苏州', value: 21},
-            {name: '郑州', value: 19},
-            {name: '长沙', value: 22},
-            {name: '沈阳', value: 14},
-            {name: '青岛', value: 16},
-            {name: '宁波', value: 21},
-            {name: '昆明', value: 19},
-            {name: '福州', value: 24},
-            {name: '厦门', value: 24}
+        // 从服务器获取的城市降雨数据（单位：毫米）
+        const rainfallData = [
+            {name: '北京', value: 5},
+            {name: '上海', value: 15},
+            {name: '广州', value: 25},
+            {name: '深圳', value: 20},
+            {name: '杭州', value: 12},
+            {name: '南京', value: 10},
+            {name: '武汉', value: 18},
+            {name: '成都', value: 8},
+            {name: '重庆', value: 22},
+            {name: '西安', value: 3},
+            {name: '天津', value: 6},
+            {name: '苏州', value: 14},
+            {name: '郑州', value: 7},
+            {name: '长沙', value: 16},
+            {name: '沈阳', value: 2},
+            {name: '青岛', value: 9},
+            {name: '宁波', value: 13},
+            {name: '昆明', value: 4},
+            {name: '福州', value: 23},
+            {name: '厦门', value: 19}
         ];
         
         // 配置项
         const option = {
             title: {
-                text: '全国城市温度分布',
+                text: '全国城市降雨分布',
                 left: 'center'
             },
             tooltip: {
                 trigger: 'item',
                 formatter: function(params) {
-                    return params.name + ': ' + params.value + '°C';
+                    return params.name + ': ' + params.value + 'mm';
                 }
             },
             visualMap: {
-                min: 10,
+                min: 0,
                 max: 30,
-                text: ['高温', '低温'],
+                text: ['多雨', '少雨'],
                 realtime: false,
                 calculable: true,
                 inRange: {
-                    color: ['#e0f7fa', '#4fc3f7', '#03a9f4', '#0288d1', '#ff9800', '#f57c00', '#ef6c00']
+                    color: ['#e0f7fa', '#4fc3f7', '#03a9f4', '#0288d1', '#0277bd', '#01579b', '#00478f']
                 }
             },
             series: [{
-                name: '温度',
+                name: '降雨量',
                 type: 'map',
                 map: 'china',
                 roam: true,
@@ -168,7 +168,7 @@
                     show: true,
                     fontSize: 10
                 },
-                data: temperatureData
+                data: rainfallData
             }]
         };
         

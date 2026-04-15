@@ -768,30 +768,36 @@ def delete_weather(weather_id):
 def national_weather():
     # 获取所有城市的最新天气数据
     cities_data = []
-    cities = Weather.query.distinct(Weather.city).all()
+    # 使用字典去重，确保每个城市只出现一次
+    city_dict = {}
     
-    for city in cities:
-        latest_weather = Weather.query.filter_by(city=city.city).order_by(Weather.date.desc()).first()
-        if latest_weather:
+    # 获取所有天气数据，按城市和日期排序
+    weather_records = Weather.query.order_by(Weather.city, Weather.date.desc()).all()
+    
+    for record in weather_records:
+        if record.city not in city_dict:
             # 计算宜居指数（简单算法：温度适宜度 + 湿度适宜度 + 空气质量适宜度）
             # 温度适宜度：20-25度为最佳，偏离越多分数越低
-            temp_score = max(0, 100 - abs(latest_weather.temperature - 22.5) * 10)
+            temp_score = max(0, 100 - abs(record.temperature - 22.5) * 10)
             # 湿度适宜度：40-60%为最佳，偏离越多分数越低
-            humidity_score = max(0, 100 - abs(latest_weather.humidity - 50) * 2)
+            humidity_score = max(0, 100 - abs(record.humidity - 50) * 2)
             # 空气质量适宜度：AQI越低分数越高
-            aqi_score = max(0, 100 - (latest_weather.aqi or 50) * 0.5)
+            aqi_score = max(0, 100 - (record.aqi or 50) * 0.5)
             # 综合宜居指数
             livability_score = (temp_score + humidity_score + aqi_score) / 3
             
-            cities_data.append({
-                'city': city.city,
-                'temperature': latest_weather.temperature,
-                'humidity': latest_weather.humidity,
-                'description': latest_weather.description,
-                'aqi': latest_weather.aqi or 50,
+            city_dict[record.city] = {
+                'city': record.city,
+                'temperature': record.temperature,
+                'humidity': record.humidity,
+                'description': record.description,
+                'aqi': record.aqi or 50,
                 'livability_score': round(livability_score, 2),
-                'date': latest_weather.date
-            })
+                'date': record.date
+            }
+    
+    # 将字典值转换为列表
+    cities_data = list(city_dict.values())
     
     # 按温度排序（从高到低）
     temperature_ranking = sorted(cities_data, key=lambda x: x['temperature'], reverse=True)
