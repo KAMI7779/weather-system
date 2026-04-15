@@ -95,27 +95,6 @@ def dashboard():
     default_city = City.query.filter_by(user_id=current_user.id, is_default=True).first()
     default_city_name = default_city.name if default_city else "北京"
     
-    # 获取所有城市的最新天气数据
-    cities_data = []
-    cities = Weather.query.distinct(Weather.city).all()
-    
-    for city in cities:
-        latest_weather = Weather.query.filter_by(city=city.city).order_by(Weather.date.desc()).first()
-        if latest_weather:
-            cities_data.append({
-                'city': city.city,
-                'temperature': latest_weather.temperature,
-                'humidity': latest_weather.humidity,
-                'description': latest_weather.description,
-                'date': latest_weather.date
-            })
-    
-    # 按温度排序（从高到低）
-    cities_data.sort(key=lambda x: x['temperature'], reverse=True)
-    
-    # 获取统计数据
-    stats = basic_stats()
-    
     # 获取默认城市的未来预报数据
     forecast_data = None
     max_retries = 3
@@ -260,8 +239,6 @@ def dashboard():
         }
     
     return render_template("dashboard.html", 
-                           cities_data=cities_data, 
-                           stats=stats, 
                            forecast_data=forecast_data,
                            air_quality_data=air_quality_data,
                            life_index_data=life_index_data,
