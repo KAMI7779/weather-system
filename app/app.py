@@ -763,6 +763,43 @@ def delete_weather(weather_id):
         flash("天气数据不存在")
     return redirect(url_for("admin"))
 
+def get_city_weather_from_api(city_name):
+    """从wttr.in API获取城市天气数据"""
+    try:
+        url = f"https://wttr.in/{city_name}?format=j1"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # 获取当前天气数据
+            current = data.get("current_condition", [{}])[0]
+            
+            # 获取温度
+            temp_c = float(current.get("temp_C", 20))
+            
+            # 获取湿度
+            humidity = float(current.get("humidity", 50))
+            
+            # 获取天气描述
+            description = current.get("weatherDesc", [{}])[0].get("value", "未知")
+            
+            # 获取AQI（wttr.in可能没有直接提供AQI，我们使用默认值或模拟）
+            aqi = int(current.get("air_quality", {}).get("us-epa-index", 50))
+            if aqi == 50:  # 如果AQI为默认值，说明API没有提供
+                aqi = 60  # 使用中等偏下的AQI值
+            
+            return {
+                'temperature': temp_c,
+                'humidity': humidity,
+                'description': description,
+                'aqi': aqi
+            }
+    except Exception as e:
+        print(f"获取{city_name}天气数据失败: {e}")
+    
+    return None
+
 @app.route("/national-weather")
 @login_required
 def national_weather():
@@ -771,67 +808,56 @@ def national_weather():
     # 使用字典去重，确保每个城市只出现一次
     city_dict = {}
     
-    # 导入随机模块
-    import random
+    # 默认城市列表，用于从API获取数据
+    default_cities = [
+        '北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安',
+        '天津', '南京', '重庆', '郑州', '长沙', '沈阳', '青岛', '宁波',
+        '昆明', '福州', '厦门', '济南', '大连', '合肥', '南宁', '贵阳',
+        '石家庄', '太原', '哈尔滨', '长春', '南昌', '兰州', '乌鲁木齐'
+    ]
     
-    # 获取所有天气数据，按城市和日期排序
-    weather_records = Weather.query.order_by(Weather.city, Weather.date.desc()).all()
-    
-    for record in weather_records:
-        if record.city not in city_dict:
-            # 生成实时温度值（10-30度之间）
-            realtime_temperature = random.uniform(10, 30)
-            # 生成实时湿度值（30-90%之间）
-            realtime_humidity = random.uniform(30, 90)
-            # 生成实时AQI值（10-110之间）
-            realtime_aqi = random.randint(10, 110)
-            
-            # 计算宜居指数（简单算法：温度适宜度 + 湿度适宜度 + 空气质量适宜度）
-            # 温度适宜度：20-25度为最佳，偏离越多分数越低
-            temp_score = max(0, 100 - abs(realtime_temperature - 22.5) * 10)
-            # 湿度适宜度：40-60%为最佳，偏离越多分数越低
-            humidity_score = max(0, 100 - abs(realtime_humidity - 50) * 2)
-            # 空气质量适宜度：AQI越低分数越高
-            aqi_score = max(0, 100 - realtime_aqi * 0.5)
-            # 综合宜居指数
-            livability_score = (temp_score + humidity_score + aqi_score) / 3
-            
-            city_dict[record.city] = {
-                'city': record.city,
-                'temperature': round(realtime_temperature, 1),
-                'humidity': round(realtime_humidity, 1),
-                'description': record.description,
-                'aqi': realtime_aqi,
-                'livability_score': round(livability_score, 2),
-                'date': record.date
-            }
-    
-    # 如果没有天气记录，添加一些默认城市
-    if not city_dict:
-        default_cities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安']
-        for city in default_cities:
-            # 生成实时温度值（10-30度之间）
-            realtime_temperature = random.uniform(10, 30)
-            # 生成实时湿度值（30-90%之间）
-            realtime_humidity = random.uniform(30, 90)
-            # 生成实时AQI值（10-110之间）
-            realtime_aqi = random.randint(10, 110)
-            
+    # 从API获取每个城市的实时数据
+    for city in default_cities:
+        weather_data = get_city_weather_from_api(city)
+        
+        if weather_data:
             # 计算宜居指数
-            temp_score = max(0, 100 - abs(realtime_temperature - 22.5) * 10)
-            humidity_score = max(0, 100 - abs(realtime_humidity - 50) * 2)
-            aqi_score = max(0, 100 - realtime_aqi * 0.5)
+            temp_score = max(0, 100 - abs(weather_data['temperature'] - 22.5) * 10)
+            humidity_score = max(0, 100 - abs(weather_data['humidity'] - 50) * 2)
+            aqi_score = max(0, 100 - weather_data['aqi'] * 0.5)
             livability_score = (temp_score + humidity_score + aqi_score) / 3
             
             city_dict[city] = {
                 'city': city,
-                'temperature': round(realtime_temperature, 1),
-                'humidity': round(realtime_humidity, 1),
-                'description': '晴',
-                'aqi': realtime_aqi,
+                'temperature': weather_data['temperature'],
+                'humidity': weather_data['humidity'],
+                'description': weather_data['description'],
+                'aqi': weather_data['aqi'],
                 'livability_score': round(livability_score, 2),
                 'date': datetime.utcnow()
             }
+    
+    # 如果API获取失败，尝试使用数据库中的数据
+    if not city_dict:
+        weather_records = Weather.query.order_by(Weather.city, Weather.date.desc()).all()
+        
+        for record in weather_records:
+            if record.city not in city_dict:
+                # 使用数据库中的数据
+                temp_score = max(0, 100 - abs(record.temperature - 22.5) * 10)
+                humidity_score = max(0, 100 - abs(record.humidity - 50) * 2)
+                aqi_score = max(0, 100 - (record.aqi or 50) * 0.5)
+                livability_score = (temp_score + humidity_score + aqi_score) / 3
+                
+                city_dict[record.city] = {
+                    'city': record.city,
+                    'temperature': record.temperature,
+                    'humidity': record.humidity,
+                    'description': record.description,
+                    'aqi': record.aqi or 50,
+                    'livability_score': round(livability_score, 2),
+                    'date': record.date
+                }
     
     # 将字典值转换为列表
     cities_data = list(city_dict.values())
@@ -843,9 +869,25 @@ def national_weather():
     # 按宜居指数排序（从高到低）
     livability_ranking = sorted(cities_data, key=lambda x: x['livability_score'], reverse=True)
     
+    # 获取降雨数据
+    rainfall_data = []
+    for city in default_cities[:10]:  # 取前10个城市作为示例
+        weather_data = get_city_weather_from_api(city)
+        if weather_data:
+            # wttr.in API不直接提供降雨量，我们通过天气描述和湿度来估算
+            # 这里使用一个估算值，实际项目中应该使用专门的降雨API
+            rainfall = 0
+            if '雨' in weather_data['description']:
+                rainfall = weather_data['humidity'] / 3  # 估算降雨量
+            rainfall_data.append({
+                'name': city,
+                'value': round(rainfall, 1)
+            })
+    
     return render_template("national_weather.html", 
                            temperature_ranking=temperature_ranking,
                            air_quality_ranking=air_quality_ranking,
                            livability_ranking=livability_ranking,
+                           rainfall_data=rainfall_data,
                            user=current_user)
 
