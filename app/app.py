@@ -862,20 +862,82 @@ def national_weather():
     # 将字典值转换为列表
     cities_data = list(city_dict.values())
     
+    # 中国主要省份的省会城市
+    provincial_capitals = [
+        '北京', '上海', '广州', '成都', '武汉', '西安', '南京', '重庆',
+        '杭州', '济南', '哈尔滨', '长春', '沈阳', '长沙', '福州', '南昌',
+        '昆明', '南宁', '贵阳', '太原', '石家庄', '合肥', '西宁', '银川',
+        '乌鲁木齐', '拉萨', '海口', '呼和浩特'
+    ]
+    
     # 按温度排序（从高到低）
     temperature_ranking = sorted(cities_data, key=lambda x: x['temperature'], reverse=True)
-    # 按空气质量排序（从低到高，AQI越低越好）
-    air_quality_ranking = sorted(cities_data, key=lambda x: x['aqi'])
+    
+    # 过滤出省会城市的空气质量排名
+    air_quality_ranking = []
+    for city in provincial_capitals:
+        for data in cities_data:
+            if data['city'] == city:
+                air_quality_ranking.append(data)
+                break
+    # 按AQI从低到高排序
+    air_quality_ranking = sorted(air_quality_ranking, key=lambda x: x['aqi'])
+    
     # 按宜居指数排序（从高到低）
     livability_ranking = sorted(cities_data, key=lambda x: x['livability_score'], reverse=True)
     
+    # 简单线性回归模型预测短期温度趋势
+    def simple_linear_regression(x, y):
+        """简单线性回归模型"""
+        n = len(x)
+        sum_x = sum(x)
+        sum_y = sum(y)
+        sum_xy = sum(xi * yi for xi, yi in zip(x, y))
+        sum_x2 = sum(xi**2 for xi in x)
+        
+        # 计算斜率和截距
+        slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x**2)
+        intercept = (sum_y - slope * sum_x) / n
+        
+        return slope, intercept
+    
+    # 生成温度预测数据
+    temperature_prediction = {}
+    for city in provincial_capitals[:5]:  # 取前5个省会城市进行预测
+        # 模拟历史温度数据（最近7天）
+        import random
+        historical_temps = []
+        for i in range(7):
+            base_temp = random.uniform(15, 30)
+            # 添加一些随机波动
+            temp = base_temp + random.uniform(-2, 2)
+            historical_temps.append(round(temp, 1))
+        
+        # 准备回归数据
+        x = list(range(7))  # 时间点（0-6）
+        y = historical_temps  # 历史温度
+        
+        # 训练模型
+        slope, intercept = simple_linear_regression(x, y)
+        
+        # 预测未来3天的温度
+        predictions = []
+        for i in range(7, 10):  # 未来3天（7-9）
+            pred_temp = slope * i + intercept
+            predictions.append(round(pred_temp, 1))
+        
+        temperature_prediction[city] = {
+            'historical': historical_temps,
+            'predictions': predictions
+        }
+    
     # 获取降雨数据
     rainfall_data = []
-    for city in default_cities[:10]:  # 取前10个城市作为示例
+    
+    for city in provincial_capitals:
         weather_data = get_city_weather_from_api(city)
         if weather_data:
             # wttr.in API不直接提供降雨量，我们通过天气描述和湿度来估算
-            # 这里使用一个估算值，实际项目中应该使用专门的降雨API
             rainfall = 0
             if '雨' in weather_data['description']:
                 rainfall = weather_data['humidity'] / 3  # 估算降雨量
@@ -883,11 +945,18 @@ def national_weather():
                 'name': city,
                 'value': round(rainfall, 1)
             })
+        else:
+            # 如果API调用失败，设置默认值
+            rainfall_data.append({
+                'name': city,
+                'value': 0
+            })
     
     return render_template("national_weather.html", 
                            temperature_ranking=temperature_ranking,
                            air_quality_ranking=air_quality_ranking,
                            livability_ranking=livability_ranking,
                            rainfall_data=rainfall_data,
+                           temperature_prediction=temperature_prediction,
                            user=current_user)
 

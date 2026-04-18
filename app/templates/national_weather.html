@@ -18,40 +18,11 @@
     
     <!-- 城市排名 -->
     <div class="row mb-4">
-        <!-- 温度排名 -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">城市温度排名</h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>排名</th>
-                                <th>城市</th>
-                                <th>温度</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for city in temperature_ranking[:10] %}
-                            <tr>
-                                <td>{{ loop.index }}</td>
-                                <td>{{ city.city }}</td>
-                                <td>{{ city.temperature }}°C</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
         <!-- 空气质量排名 -->
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title">空气质量排名</h5>
+                    <h5 class="card-title">省会城市空气质量排名</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-striped">
@@ -63,7 +34,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for city in air_quality_ranking[:10] %}
+                            {% for city in air_quality_ranking[:15] %}
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>{{ city.city }}</td>
@@ -77,7 +48,7 @@
         </div>
         
         <!-- 宜居指数排名 -->
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title">宜居指数排名</h5>
@@ -92,7 +63,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for city in livability_ranking[:10] %}
+                            {% for city in livability_ranking[:15] %}
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>{{ city.city }}</td>
@@ -105,6 +76,23 @@
             </div>
         </div>
     </div>
+    
+    <!-- 温度趋势预测 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">温度趋势预测</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for city, data in temperature_prediction.items() %}
+                <div class="col-md-4 mb-4">
+                    <div id="temp-chart-{{ city }}" style="width: 100%; height: 200px;"></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
 </div>
 
 <script>
@@ -158,6 +146,77 @@
         window.addEventListener('resize', function() {
             mapChart.resize();
         });
+        
+        // 初始化温度趋势图表
+        const temperaturePrediction = {{ temperature_prediction | tojson | safe }};
+        
+        for (const city in temperaturePrediction) {
+            const data = temperaturePrediction[city];
+            const chartDom = document.getElementById('temp-chart-' + city);
+            const myChart = echarts.init(chartDom);
+            
+            // 生成日期标签
+            const dates = [];
+            for (let i = 1; i <= 7; i++) {
+                dates.push('Day ' + i);
+            }
+            for (let i = 1; i <= 3; i++) {
+                dates.push('预测 ' + i);
+            }
+            
+            // 合并历史数据和预测数据
+            const allTemps = [...data.historical, ...data.predictions];
+            
+            const tempOption = {
+                title: {
+                    text: city + ' 温度趋势',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        return params[0].name + ': ' + params[0].value + '°C';
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '温度 (°C)'
+                },
+                series: [{
+                    data: allTemps,
+                    type: 'line',
+                    smooth: true,
+                    markLine: {
+                        data: [{
+                            xAxis: 6.5,
+                            lineStyle: {
+                                color: '#ff0000'
+                            },
+                            label: {
+                                formatter: '预测开始'
+                            }
+                        }]
+                    }
+                }]
+            };
+            
+            myChart.setOption(tempOption);
+            
+            // 响应式处理
+            window.addEventListener('resize', function() {
+                myChart.resize();
+            });
+        }
     });
 </script>
 {% endblock %}
