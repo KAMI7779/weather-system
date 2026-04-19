@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}温度分布热力图{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">温度分布热力图</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">基于克里金插值的温度分布</h5>
+        </div>
+        <div class="card-body">
+            <form id="temperature-map-form">
+                <div class="form-group">
+                    <label for="date">日期</label>
+                    <input type="date" class="form-control" id="date" name="date" required>
+                </div>
+                <button type="submit" class="btn btn-primary">生成热力图</button>
+            </form>
+            <div id="temperature-map" style="width: 100%; height: 500px; margin-top: 20px;"></div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">叠加分析</h5>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label>叠加图层</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="admin-layer" checked>
+                    <label class="form-check-label" for="admin-layer">行政区划</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="crop-layer">
+                    <label class="form-check-label" for="crop-layer">作物种植区</label>
+                </div>
+            </div>
+            <button id="overlay-btn" class="btn btn-primary">应用叠加</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化温度分布图
+        const mapChart = echarts.init(document.getElementById('temperature-map'));
+        
+        // 生成热力图
+        document.getElementById('temperature-map-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/kriging/temperature', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 绘制温度热力图
+                    const option = {
+                        title: {
+                            text: '全国温度分布热力图',
+                            left: 'center'
+                        },
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: function(params) {
+                                if (params.seriesName === '气象站') {
+                                    return params.name + ': ' + params.value[2] + '°C';
+                                } else {
+                                    return '温度: ' + params.value[2] + '°C';
+                                }
+                            }
+                        },
+                        visualMap: {
+                            min: 10,
+                            max: 30,
+                            text: ['高温', '低温'],
+                            realtime: false,
+                            calculable: true,
+                            inRange: {
+                                color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                            }
+                        },
+                        geo: {
+                            map: 'china',
+                            roam: true,
+                            label: {
+                                show: true,
+                                fontSize: 10
+                            }
+                        },
+                        series: [
+                            {
+                                name: '温度热力',
+                                type: 'heatmap',
+                                coordinateSystem: 'geo',
+                                data: data.grid_data,
+                                pointSize: 20,
+                                blurSize: 15
+                            },
+                            {
+                                name: '气象站',
+                                type: 'scatter',
+                                coordinateSystem: 'geo',
+                                data: data.stations.map(station => ({
+                                    name: station.name,
+                                    value: [station.lon, station.lat, station.temperature]
+                                })),
+                                symbolSize: 10,
+                                label: {
+                                    show: true,
+                                    fontSize: 12
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true
+                                    }
+                                }
+                            }
+                        ]
+                    };
+                    
+                    mapChart.setOption(option);
+                } else {
+                    alert('生成热力图失败: ' + data.message);
+                }
+            });
+        });
+        
+        // 应用叠加图层
+        document.getElementById('overlay-btn').addEventListener('click', function() {
+            const adminLayer = document.getElementById('admin-layer').checked;
+            const cropLayer = document.getElementById('crop-layer').checked;
+            
+            // 模拟叠加分析
+            alert('叠加分析已应用\n行政区划: ' + (adminLayer ? '显示' : '隐藏') + '\n作物种植区: ' + (cropLayer ? '显示' : '隐藏'));
+        });
+        
+        // 响应式处理
+        window.addEventListener('resize', function() {
+            mapChart.resize();
+        });
+        
+        // 初始加载热力图
+        document.getElementById('temperature-map-form').dispatchEvent(new Event('submit'));
+    });
+</script>
+{% endblock %}

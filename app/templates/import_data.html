@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}批量导入历史数据{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">批量导入历史数据</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">上传历史气象数据</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file">选择文件</label>
+                    <input type="file" class="form-control-file" id="file" name="file" required>
+                    <small class="form-text text-muted">支持CSV和Excel(.xlsx)文件格式</small>
+                </div>
+                <div class="form-group">
+                    <label>文件格式要求</label>
+                    <ul class="list-group mt-2">
+                        <li class="list-group-item">CSV文件应包含以下字段：city, temperature, humidity, description, date</li>
+                        <li class="list-group-item">Excel文件应包含相同的列名</li>
+                        <li class="list-group-item">日期格式应为：YYYY-MM-DD HH:MM:SS</li>
+                    </ul>
+                </div>
+                <button type="submit" class="btn btn-primary">导入数据</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title">导入历史</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>文件名</th>
+                        <th>状态</th>
+                        <th>导入记录数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 模拟导入历史记录 -->
+                    <tr>
+                        <td>2024-01-01 11:00:00</td>
+                        <td>weather_data.csv</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                        <td>1000</td>
+                    </tr>
+                    <tr>
+                        <td>2024-01-01 10:30:00</td>
+                        <td>historical_data.xlsx</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                        <td>500</td>
+                    </tr>
+                    <tr>
+                        <td>2024-01-01 10:00:00</td>
+                        <td>invalid_data.csv</td>
+                        <td><span class="badge badge-danger">失败</span></td>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}添加气象站{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">添加气象站</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">气象站信息</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="station_id">气象站ID</label>
+                    <input type="text" class="form-control" id="station_id" name="station_id" required>
+                </div>
+                <div class="form-group">
+                    <label for="name">气象站名称</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="latitude">纬度</label>
+                        <input type="number" step="0.0001" class="form-control" id="latitude" name="latitude" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="longitude">经度</label>
+                        <input type="number" step="0.0001" class="form-control" id="longitude" name="longitude" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="altitude">海拔高度（米）</label>
+                    <input type="number" step="0.1" class="form-control" id="altitude" name="altitude">
+                </div>
+                <div class="form-group">
+                    <label for="station_type">气象站类型</label>
+                    <select class="form-control" id="station_type" name="station_type" required>
+                        <option value="自动站">自动站</option>
+                        <option value="手动站">手动站</option>
+                        <option value="移动站">移动站</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">添加</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

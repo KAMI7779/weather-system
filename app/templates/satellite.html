@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}卫星云图{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">卫星云图</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('update_satellite') }}" class="btn btn-primary">更新卫星云图</a>
+    </div>
+    
+    <div class="row">
+        {% for image in images %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{{ image.image_type }}通道</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ image.image_url }}" class="img-fluid" alt="{{ image.description }}">
+                    <p class="mt-2"><strong>时间:</strong> {{ image.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><strong>分辨率:</strong> {{ image.resolution }}</p>
+                    <p><strong>描述:</strong> {{ image.description }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

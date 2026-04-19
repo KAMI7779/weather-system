@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}雷达回波图{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">雷达回波图</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('update_radar') }}" class="btn btn-primary">更新雷达回波图</a>
+    </div>
+    
+    <div class="row">
+        {% for echo in echoes %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{{ echo.radar_id }}雷达</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ echo.image_url }}" class="img-fluid" alt="{{ echo.description }}">
+                    <p class="mt-2"><strong>时间:</strong> {{ echo.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><strong>最大回波强度:</strong> {{ echo.max_echo }} dBZ</p>
+                    <p><strong>覆盖范围:</strong> {{ echo.coverage_area }}</p>
+                    <p><strong>描述:</strong> {{ echo.description }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

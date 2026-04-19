@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}数值预报模式数据{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">数值预报模式数据</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('update_numerical_forecast') }}" class="btn btn-primary">更新预报数据</a>
+    </div>
+    
+    {% for model in models %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">{{ model }} 模式预报</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>温度预报</h6>
+                    <div id="temp-chart-{{ model }}" style="width: 100%; height: 200px;"></div>
+                </div>
+                <div class="col-md-6">
+                    <h6>降水量预报</h6>
+                    <div id="precip-chart-{{ model }}" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h6>风速预报</h6>
+                    <div id="wind-chart-{{ model }}" style="width: 100%; height: 200px;"></div>
+                </div>
+                <div class="col-md-6">
+                    <h6>气压预报</h6>
+                    <div id="pressure-chart-{{ model }}" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 模拟预报数据
+        const forecastData = {
+            "ECMWF": {
+                "temperature": [18.5, 19.2, 20.1, 21.3, 19.8, 18.9, 19.5],
+                "precipitation": [0.2, 1.5, 3.2, 0.5, 0, 0, 0.1],
+                "wind_speed": [3.2, 4.5, 5.1, 3.8, 2.5, 2.1, 2.8],
+                "pressure": [1012.5, 1011.8, 1010.5, 1011.2, 1013.1, 1014.2, 1013.5]
+            },
+            "GFS": {
+                "temperature": [17.8, 18.5, 19.8, 20.5, 19.2, 18.5, 19.0],
+                "precipitation": [0, 1.2, 2.8, 0.3, 0, 0, 0],
+                "wind_speed": [2.8, 4.2, 4.8, 3.5, 2.2, 1.8, 2.5],
+                "pressure": [1013.0, 1012.2, 1011.0, 1011.5, 1013.5, 1014.5, 1014.0]
+            }
+        };
+        
+        // 生成日期标签
+        const dates = [];
+        const today = new Date();
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }));
+        }
+        
+        // 初始化图表
+        const models = ['ECMWF', 'GFS'];
+        const variables = {
+            'temperature': { name: '温度 (°C)', color: '#FF7F50' },
+            'precipitation': { name: '降水量 (mm)', color: '#4682B4' },
+            'wind_speed': { name: '风速 (m/s)', color: '#32CD32' },
+            'pressure': { name: '气压 (hPa)', color: '#9370DB' }
+        };
+        
+        for (const model of models) {
+            for (const [varName, varInfo] of Object.entries(variables)) {
+                const chartDom = document.getElementById(`${varName}-chart-${model}`);
+                const myChart = echarts.init(chartDom);
+                
+                const option = {
+                    title: {
+                        text: model + ' ' + varInfo.name,
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 12
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function(params) {
+                            return params[0].name + ': ' + params[0].value + ' ' + varInfo.name.split(' ')[1];
+                        }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: dates
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: varInfo.name
+                    },
+                    series: [{
+                        data: forecastData[model][varName],
+                        type: 'line',
+                        smooth: true,
+                        lineStyle: {
+                            color: varInfo.color
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                offset: 0, color: varInfo.color + '80'
+                            }, {
+                                offset: 1, color: varInfo.color + '10'
+                            }])
+                        }
+                    }]
+                };
+                
+                myChart.setOption(option);
+                
+                // 响应式处理
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

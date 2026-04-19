@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}气象站管理{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">气象站管理</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('add_station') }}" class="btn btn-primary">添加气象站</a>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">气象站列表</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>经纬度</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for station in stations %}
+                    <tr>
+                        <td>{{ station.station_id }}</td>
+                        <td>{{ station.name }}</td>
+                        <td>{{ station.latitude }}, {{ station.longitude }}</td>
+                        <td>{{ station.station_type }}</td>
+                        <td>{{ station.status }}</td>
+                        <td>
+                            <a href="{{ url_for('station_data', station_id=station.station_id) }}" class="btn btn-sm btn-info">查看数据</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

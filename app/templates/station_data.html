@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ station.name }} - 观测数据{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{{ station.name }} - 观测数据</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">气象站信息</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>气象站ID:</strong> {{ station.station_id }}</p>
+            <p><strong>位置:</strong> {{ station.latitude }}, {{ station.longitude }}</p>
+            <p><strong>海拔高度:</strong> {{ station.altitude }} 米</p>
+            <p><strong>类型:</strong> {{ station.station_type }}</p>
+            <p><strong>状态:</strong> {{ station.status }}</p>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">添加观测数据</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="timestamp">时间</label>
+                    <input type="datetime-local" class="form-control" id="timestamp" name="timestamp" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="temperature">温度 (°C)</label>
+                        <input type="number" step="0.1" class="form-control" id="temperature" name="temperature">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="humidity">湿度 (%)</label>
+                        <input type="number" step="0.1" class="form-control" id="humidity" name="humidity">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="pressure">气压 (hPa)</label>
+                        <input type="number" step="0.1" class="form-control" id="pressure" name="pressure">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="wind_speed">风速 (m/s)</label>
+                        <input type="number" step="0.1" class="form-control" id="wind_speed" name="wind_speed">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="wind_direction">风向 (°)</label>
+                        <input type="number" step="1" class="form-control" id="wind_direction" name="wind_direction" min="0" max="360">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="precipitation">降水量 (mm)</label>
+                        <input type="number" step="0.1" class="form-control" id="precipitation" name="precipitation">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="visibility">能见度 (km)</label>
+                    <input type="number" step="0.1" class="form-control" id="visibility" name="visibility">
+                </div>
+                <button type="submit" class="btn btn-primary">添加数据</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">最新观测数据</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>温度</th>
+                        <th>湿度</th>
+                        <th>气压</th>
+                        <th>风速</th>
+                        <th>风向</th>
+                        <th>降水量</th>
+                        <th>能见度</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obs in observations %}
+                    <tr>
+                        <td>{{ obs.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ obs.temperature if obs.temperature else '-' }}</td>
+                        <td>{{ obs.humidity if obs.humidity else '-' }}</td>
+                        <td>{{ obs.pressure if obs.pressure else '-' }}</td>
+                        <td>{{ obs.wind_speed if obs.wind_speed else '-' }}</td>
+                        <td>{{ obs.wind_direction if obs.wind_direction else '-' }}</td>
+                        <td>{{ obs.precipitation if obs.precipitation else '-' }}</td>
+                        <td>{{ obs.visibility if obs.visibility else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

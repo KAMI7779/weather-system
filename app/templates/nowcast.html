@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}短临降水预报和山洪风险{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">短临降水预报和山洪风险</h1>
+    
+    <div class="row">
+        <!-- 短临降水预报 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">基于雷达回波的短临降水预报（未来2小时）</h5>
+                </div>
+                <div class="card-body">
+                    <form id="precip-nowcast-form">
+                        <div class="form-group">
+                            <label for="nowcast-city">城市</label>
+                            <input type="text" class="form-control" id="nowcast-city" name="city" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">获取预报</button>
+                    </form>
+                    <div id="precip-nowcast-result" class="mt-3">
+                        <div id="precip-chart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 山洪风险指数计算 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">山洪风险指数计算</h5>
+                </div>
+                <div class="card-body">
+                    <form id="flash-flood-form">
+                        <div class="form-group">
+                            <label for="location">位置</label>
+                            <input type="text" class="form-control" id="location" name="location" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="latitude">纬度</label>
+                                <input type="number" step="0.0001" class="form-control" id="latitude" name="latitude" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="longitude">经度</label>
+                                <input type="number" step="0.0001" class="form-control" id="longitude" name="longitude" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="rainfall-forecast">预测降雨量 (mm)</label>
+                            <input type="number" step="0.1" class="form-control" id="rainfall-forecast" name="rainfall_forecast" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">计算风险指数</button>
+                    </form>
+                    <div id="flash-flood-result" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 山洪风险地图 -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title">山洪风险分布地图</h5>
+        </div>
+        <div class="card-body">
+            <div id="risk-map" style="width: 100%; height: 400px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 短临降水预报
+        document.getElementById('precip-nowcast-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/nowcast/precipitation', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 绘制降水预报图表
+                    const chartDom = document.getElementById('precip-chart');
+                    const myChart = echarts.init(chartDom);
+                    
+                    const times = data.forecast.map(item => item.time);
+                    const precipitations = data.forecast.map(item => item.precipitation);
+                    
+                    const option = {
+                        title: {
+                            text: '未来2小时降水预报',
+                            left: 'center'
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: function(params) {
+                                return params[0].name + ': ' + params[0].value + ' mm';
+                            }
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: times
+                        },
+                        yAxis: {
+                            type: 'value',
+                            name: '降水量 (mm)'
+                        },
+                        series: [{
+                            data: precipitations,
+                            type: 'line',
+                            smooth: true,
+                            areaStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                                    offset: 0, color: '#4682B480'
+                                }, {
+                                    offset: 1, color: '#4682B410'
+                                }])
+                            }
+                        }]
+                    };
+                    
+                    myChart.setOption(option);
+                    
+                    // 响应式处理
+                    window.addEventListener('resize', function() {
+                        myChart.resize();
+                    });
+                } else {
+                    document.getElementById('precip-nowcast-result').innerHTML = 
+                        `<div class="alert alert-danger">获取预报失败：${data.message}</div>`;
+                }
+            });
+        });
+        
+        // 山洪风险指数计算
+        document.getElementById('flash-flood-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/nowcast/flash-flood', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    let riskLevelText = '';
+                    let riskLevelClass = '';
+                    
+                    switch(data.risk_level) {
+                        case 1:
+                            riskLevelText = '低风险';
+                            riskLevelClass = 'alert-success';
+                            break;
+                        case 2:
+                            riskLevelText = '较低风险';
+                            riskLevelClass = 'alert-info';
+                            break;
+                        case 3:
+                            riskLevelText = '中等风险';
+                            riskLevelClass = 'alert-warning';
+                            break;
+                        case 4:
+                            riskLevelText = '较高风险';
+                            riskLevelClass = 'alert-danger';
+                            break;
+                        case 5:
+                            riskLevelText = '高风险';
+                            riskLevelClass = 'alert-danger';
+                            break;
+                    }
+                    
+                    document.getElementById('flash-flood-result').innerHTML = 
+                        `<div class="alert ${riskLevelClass}">山洪风险指数：${data.risk_level} (${riskLevelText})</div>`;
+                } else {
+                    document.getElementById('flash-flood-result').innerHTML = 
+                        `<div class="alert alert-danger">计算失败：${data.message}</div>`;
+                }
+            });
+        });
+        
+        // 初始化山洪风险地图
+        const mapChart = echarts.init(document.getElementById('risk-map'));
+        
+        // 模拟风险数据
+        const riskData = [
+            {name: '北京', value: [116.4074, 39.9042, 2]},
+            {name: '上海', value: [121.4737, 31.2304, 1]},
+            {name: '广州', value: [113.2644, 23.1291, 3]},
+            {name: '成都', value: [104.0668, 30.5728, 4]},
+            {name: '武汉', value: [114.3055, 30.5928, 3]}
+        ];
+        
+        const mapOption = {
+            title: {
+                text: '山洪风险分布',
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: function(params) {
+                    const riskLevel = params.value[2];
+                    let riskText = '';
+                    switch(riskLevel) {
+                        case 1: riskText = '低风险'; break;
+                        case 2: riskText = '较低风险'; break;
+                        case 3: riskText = '中等风险'; break;
+                        case 4: riskText = '较高风险'; break;
+                        case 5: riskText = '高风险'; break;
+                    }
+                    return params.name + ': ' + riskText;
+                }
+            },
+            visualMap: {
+                min: 1,
+                max: 5,
+                text: ['高风险', '低风险'],
+                realtime: false,
+                calculable: true,
+                inRange: {
+                    color: ['#52c41a', '#73d13d', '#fadb14', '#fa8c16', '#f5222d']
+                }
+            },
+            series: [{
+                name: '山洪风险',
+                type: 'scatter',
+                coordinateSystem: 'geo',
+                data: riskData.map(item => ({
+                    name: item.name,
+                    value: item.value
+                })),
+                symbolSize: function(val) {
+                    return val[2] * 10;
+                },
+                label: {
+                    show: false
+                },
+                emphasis: {
+                    label: {
+                        show: true
+                    }
+                }
+            }]
+        };
+        
+        mapChart.setOption(mapOption);
+        
+        // 响应式处理
+        window.addEventListener('resize', function() {
+            mapChart.resize();
+        });
+    });
+</script>
+{% endblock %}

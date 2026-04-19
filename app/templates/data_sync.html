@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}气象数据库同步{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">气象数据库同步</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">同步公开气象数据库</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="card-title">NOAA 数据库</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>美国国家海洋和大气管理局(NOAA)提供的全球气象数据</p>
+                            <ul>
+                                <li>全球温度数据</li>
+                                <li>降水数据</li>
+                                <li>海平面气压</li>
+                                <li>风速风向</li>
+                            </ul>
+                            <a href="{{ url_for('sync_noaa') }}" class="btn btn-primary">立即同步</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="card-title">中国气象数据网</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>中国气象局提供的国内气象数据</p>
+                            <ul>
+                                <li>全国城市天气数据</li>
+                                <li>降水量数据</li>
+                                <li>空气质量数据</li>
+                                <li>气象灾害预警</li>
+                            </ul>
+                            <a href="{{ url_for('sync_cma') }}" class="btn btn-success">立即同步</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">同步历史</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>数据源</th>
+                        <th>状态</th>
+                        <th>详情</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 模拟同步历史记录 -->
+                    <tr>
+                        <td>2024-01-01 10:00:00</td>
+                        <td>NOAA</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                        <td>同步了1000条温度记录</td>
+                    </tr>
+                    <tr>
+                        <td>2024-01-01 09:00:00</td>
+                        <td>中国气象数据网</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                        <td>同步了500条城市天气记录</td>
+                    </tr>
+                    <tr>
+                        <td>2024-01-01 08:00:00</td>
+                        <td>NOAA</td>
+                        <td><span class="badge badge-danger">失败</span></td>
+                        <td>网络连接超时</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
