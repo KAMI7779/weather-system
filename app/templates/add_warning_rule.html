@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}添加预警规则{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">添加预警规则</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">预警规则信息</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="rule_name">规则名称</label>
+                    <input type="text" class="form-control" id="rule_name" name="rule_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="parameter">参数</label>
+                    <select class="form-control" id="parameter" name="parameter" required>
+                        <option value="temperature">温度</option>
+                        <option value="humidity">湿度</option>
+                        <option value="pressure">气压</option>
+                        <option value="wind_speed">风速</option>
+                        <option value="precipitation">降水量</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="operator">运算符</label>
+                    <select class="form-control" id="operator" name="operator" required>
+                        <option value=">">大于</option>
+                        <option value=">=">大于等于</option>
+                        <option value="<">小于</option>
+                        <option value="<=">小于等于</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="threshold">阈值</label>
+                    <input type="number" class="form-control" id="threshold" name="threshold" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="level">预警级别</label>
+                    <select class="form-control" id="level" name="level" required>
+                        <option value="一般">一般</option>
+                        <option value="较重">较重</option>
+                        <option value="严重">严重</option>
+                        <option value="特别严重">特别严重</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="message">预警消息</label>
+                    <textarea class="form-control" id="message" name="message" rows="3" required>参数{parameter}值{value}超过阈值{threshold}，请注意防范！</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="status">状态</label>
+                    <select class="form-control" id="status" name="status" required>
+                        <option value="active">活跃</option>
+                        <option value="inactive">非活跃</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">添加</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}添加数据源{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">添加数据源</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">数据源信息</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="name">数据源名称</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="source_type">数据源类型</label>
+                    <select class="form-control" id="source_type" name="source_type" required>
+                        <option value="ground_station">地面站</option>
+                        <option value="satellite">卫星</option>
+                        <option value="numerical_forecast">数值预报</option>
+                        <option value="radar">雷达</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="url">数据源URL</label>
+                    <input type="text" class="form-control" id="url" name="url">
+                </div>
+                <div class="form-group">
+                    <label for="api_key">API密钥</label>
+                    <input type="text" class="form-control" id="api_key" name="api_key">
+                </div>
+                <div class="form-group">
+                    <label for="status">状态</label>
+                    <select class="form-control" id="status" name="status" required>
+                        <option value="active">活跃</option>
+                        <option value="inactive">非活跃</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">添加</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

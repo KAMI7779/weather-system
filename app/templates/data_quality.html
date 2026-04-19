@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}数据质量控制{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">数据质量控制</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">数据质量检查结果</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>数据ID</th>
+                        <th>数据类型</th>
+                        <th>检查时间</th>
+                        <th>是否有效</th>
+                        <th>错误类型</th>
+                        <th>错误信息</th>
+                        <th>修正后的值</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in quality_records %}
+                    <tr>
+                        <td>{{ record.id }}</td>
+                        <td>{{ record.data_id }}</td>
+                        <td>{{ record.data_type }}</td>
+                        <td>{{ record.check_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ '是' if record.is_valid else '否' }}</td>
+                        <td>{{ record.error_type }}</td>
+                        <td>{{ record.error_message }}</td>
+                        <td>{{ record.corrected_value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title">数据预处理工具</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6>异常值检测</h6>
+                    <form id="outlier-form">
+                        <div class="form-group">
+                            <label for="outlier-values">输入数据（逗号分隔）</label>
+                            <input type="text" class="form-control" id="outlier-values" placeholder="例如：1.2, 3.4, 5.6, 100, 7.8">
+                        </div>
+                        <div class="form-group">
+                            <label for="outlier-threshold">阈值</label>
+                            <input type="number" class="form-control" id="outlier-threshold" value="3" step="0.1">
+                        </div>
+                        <button type="submit" class="btn btn-primary">检测</button>
+                    </form>
+                    <div id="outlier-result" class="mt-2"></div>
+                </div>
+                <div class="col-md-4">
+                    <h6>缺测插补</h6>
+                    <form id="impute-form">
+                        <div class="form-group">
+                            <label for="impute-values">输入数据（逗号分隔，空值用null表示）</label>
+                            <input type="text" class="form-control" id="impute-values" placeholder="例如：1.2, null, 5.6, 7.8">
+                        </div>
+                        <div class="form-group">
+                            <label for="impute-method">方法</label>
+                            <select class="form-control" id="impute-method">
+                                <option value="mean">均值</option>
+                                <option value="median">中位数</option>
+                                <option value="linear">线性插值</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">插补</button>
+                    </form>
+                    <div id="impute-result" class="mt-2"></div>
+                </div>
+                <div class="col-md-4">
+                    <h6>时空标准化</h6>
+                    <form id="normalize-form">
+                        <div class="form-group">
+                            <label for="normalize-values">输入数据（逗号分隔）</label>
+                            <input type="text" class="form-control" id="normalize-values" placeholder="例如：1.2, 3.4, 5.6, 7.8">
+                        </div>
+                        <div class="form-group">
+                            <label for="normalize-method">方法</label>
+                            <select class="form-control" id="normalize-method">
+                                <option value="min_max">最小-最大</option>
+                                <option value="z_score">Z-score</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">标准化</button>
+                    </form>
+                    <div id="normalize-result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 异常值检测
+        document.getElementById('outlier-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const values = document.getElementById('outlier-values').value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+            const threshold = parseFloat(document.getElementById('outlier-threshold').value);
+            
+            fetch('/api/data/detect-outliers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ values, threshold })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    let result = '<h6>检测结果：</h6>';
+                    if (data.outliers.length > 0) {
+                        result += '<ul>';
+                        data.outliers.forEach(outlier => {
+                            result += `<li>索引 ${outlier.index}: 值 ${outlier.value}, Z-score ${outlier.z_score.toFixed(2)}</li>`;
+                        });
+                        result += '</ul>';
+                    } else {
+                        result += '<p>未检测到异常值</p>';
+                    }
+                    document.getElementById('outlier-result').innerHTML = result;
+                } else {
+                    document.getElementById('outlier-result').innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+                }
+            });
+        });
+        
+        // 缺测插补
+        document.getElementById('impute-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const values = document.getElementById('impute-values').value.split(',').map(v => v.trim() === 'null' ? null : parseFloat(v.trim())).filter(v => v !== '' && (v === null || !isNaN(v)));
+            const method = document.getElementById('impute-method').value;
+            
+            fetch('/api/data/impute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ values, method })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('impute-result').innerHTML = `<h6>插补结果：</h6><p>${data.imputed_values.join(', ')}</p>`;
+                } else {
+                    document.getElementById('impute-result').innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+                }
+            });
+        });
+        
+        // 时空标准化
+        document.getElementById('normalize-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const values = document.getElementById('normalize-values').value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+            const method = document.getElementById('normalize-method').value;
+            
+            fetch('/api/data/normalize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ values, method })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('normalize-result').innerHTML = `<h6>标准化结果：</h6><p>${data.normalized_values.map(v => v.toFixed(2)).join(', ')}</p>`;
+                } else {
+                    document.getElementById('normalize-result').innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

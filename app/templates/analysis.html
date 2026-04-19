@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}核心分析引擎{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">核心分析引擎</h1>
+    
+    <div class="row">
+        <!-- 积温计算 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">积温计算（GDD）</h5>
+                </div>
+                <div class="card-body">
+                    <form id="gdd-form">
+                        <div class="form-group">
+                            <label for="gdd-temperatures">温度数据（逗号分隔）</label>
+                            <input type="text" class="form-control" id="gdd-temperatures" placeholder="例如：15, 18, 20, 22, 19">
+                        </div>
+                        <div class="form-group">
+                            <label for="gdd-base">基础温度（°C）</label>
+                            <input type="number" class="form-control" id="gdd-base" value="10" step="0.1">
+                        </div>
+                        <button type="submit" class="btn btn-primary">计算</button>
+                    </form>
+                    <div id="gdd-result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 干旱指数计算 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">干旱指数计算</h5>
+                </div>
+                <div class="card-body">
+                    <form id="drought-form">
+                        <div class="form-group">
+                            <label for="precipitation">降水量（mm）</label>
+                            <input type="number" class="form-control" id="precipitation" placeholder="例如：50">
+                        </div>
+                        <div class="form-group">
+                            <label for="potential-evaporation">潜在蒸发量（mm）</label>
+                            <input type="number" class="form-control" id="potential-evaporation" placeholder="例如：30">
+                        </div>
+                        <button type="submit" class="btn btn-primary">计算</button>
+                    </form>
+                    <div id="drought-result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 极端天气重现期计算 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">极端天气重现期计算</h5>
+                </div>
+                <div class="card-body">
+                    <form id="recurrence-form">
+                        <div class="form-group">
+                            <label for="recurrence-values">历史数据（逗号分隔）</label>
+                            <input type="text" class="form-control" id="recurrence-values" placeholder="例如：10, 15, 20, 25, 30, 35, 40, 45, 50">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-value">事件值</label>
+                            <input type="number" class="form-control" id="event-value" placeholder="例如：50">
+                        </div>
+                        <button type="submit" class="btn btn-primary">计算</button>
+                    </form>
+                    <div id="recurrence-result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 积温计算
+        document.getElementById('gdd-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const temperatures = document.getElementById('gdd-temperatures').value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+            const base_temperature = parseFloat(document.getElementById('gdd-base').value);
+            
+            fetch('/api/analysis/gdd', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ temperatures, base_temperature })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('gdd-result').innerHTML = `<h6>积温结果：</h6><p>${data.gdd.toFixed(2)} °C·天</p>`;
+                } else {
+                    document.getElementById('gdd-result').innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+                }
+            });
+        });
+        
+        // 干旱指数计算
+        document.getElementById('drought-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const precipitation = parseFloat(document.getElementById('precipitation').value);
+            const potential_evaporation = parseFloat(document.getElementById('potential-evaporation').value);
+            
+            fetch('/api/analysis/drought-index', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ precipitation, potential_evaporation })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('drought-result').innerHTML = `<h6>干旱指数结果：</h6><p>指数：${data.drought_index}</p><p>等级：${data.drought_level}</p>`;
+                } else {
+                    document.getElementById('drought-result').innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+                }
+            });
+        });
+        
+        // 极端天气重现期计算
+        document.getElementById('recurrence-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const values = document.getElementById('recurrence-values').value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+            const event_value = parseFloat(document.getElementById('event-value').value);
+            
+            fetch('/api/analysis/recurrence-period', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ values, event_value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('recurrence-result').innerHTML = `<h6>重现期结果：</h6><p>${data.recurrence_period.toFixed(2)} 年</p>`;
+                } else {
+                    document.getElementById('recurrence-result').innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

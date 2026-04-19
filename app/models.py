@@ -112,6 +112,49 @@ class NumericalForecast(db.Model):
     level = db.Column(db.String(50), nullable=True)  # 高度层
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# 数据源配置表
+class DataSource(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    source_type = db.Column(db.String(100), nullable=False)  # 地面站、卫星、数值预报等
+    url = db.Column(db.String(500), nullable=True)
+    api_key = db.Column(db.String(500), nullable=True)
+    status = db.Column(db.String(50), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# 数据接入日志表
+class DataAccessLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    data_source = db.Column(db.String(200), nullable=False)
+    data_type = db.Column(db.String(100), nullable=False)
+    record_count = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.String(500), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+# 数据质量控制表
+class DataQuality(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    data_id = db.Column(db.Integer, nullable=False)  # 关联的原始数据ID
+    data_type = db.Column(db.String(100), nullable=False)  # 数据类型
+    check_time = db.Column(db.DateTime, default=datetime.utcnow)
+    is_valid = db.Column(db.Boolean, default=True)  # 是否有效
+    error_type = db.Column(db.String(100), nullable=True)  # 错误类型
+    error_message = db.Column(db.String(500), nullable=True)  # 错误信息
+    corrected_value = db.Column(db.Float, nullable=True)  # 修正后的值
+
+# 数据预处理记录表
+class DataPreprocessing(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    data_id = db.Column(db.Integer, nullable=False)  # 关联的原始数据ID
+    data_type = db.Column(db.String(100), nullable=False)  # 数据类型
+    preprocess_time = db.Column(db.DateTime, default=datetime.utcnow)
+    preprocess_type = db.Column(db.String(100), nullable=False)  # 预处理类型
+    original_value = db.Column(db.Float, nullable=True)  # 原始值
+    processed_value = db.Column(db.Float, nullable=True)  # 处理后的值
+    parameters = db.Column(db.Text, nullable=True)  # 预处理参数
+
 # 山洪风险指数表
 class FlashFloodRisk(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -159,4 +202,41 @@ class AlgorithmModel(db.Model):
     accuracy = db.Column(db.Float, nullable=True)  # 模型准确率
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# 预警规则表
+class WarningRule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_name = db.Column(db.String(200), nullable=False, unique=True)
+    parameter = db.Column(db.String(100), nullable=False)  # 预警参数
+    operator = db.Column(db.String(10), nullable=False)  # 运算符
+    threshold = db.Column(db.Float, nullable=False)  # 阈值
+    level = db.Column(db.String(50), nullable=False)  # 预警级别
+    message = db.Column(db.String(500), nullable=False)  # 预警消息
+    status = db.Column(db.String(50), default='active')  # 状态
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# 预警记录表
+class WarningRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('warning_rule.id'), nullable=False)
+    station_id = db.Column(db.String(100), nullable=True)
+    location = db.Column(db.String(200), nullable=False)
+    value = db.Column(db.Float, nullable=False)  # 实际值
+    threshold = db.Column(db.Float, nullable=False)  # 阈值
+    level = db.Column(db.String(50), nullable=False)  # 预警级别
+    message = db.Column(db.String(500), nullable=False)  # 预警消息
+    status = db.Column(db.String(50), default='active')  # 状态
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# 推送记录表
+class PushRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    warning_id = db.Column(db.Integer, db.ForeignKey('warning_record.id'), nullable=False)
+    push_type = db.Column(db.String(50), nullable=False)  # 推送类型
+    recipient = db.Column(db.String(200), nullable=False)  # 接收人
+    message = db.Column(db.String(500), nullable=False)  # 推送消息
+    status = db.Column(db.String(50), nullable=False)  # 推送状态
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

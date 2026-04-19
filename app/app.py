@@ -1,11 +1,12 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from app.models import db, User, Weather, City, Warning
+from app.models import db, User, Weather, City, Warning, WeatherStation, StationObservation, SatelliteImage, RadarEcho, NumericalForecast, DataSource, DataAccessLog, DataQuality, DataPreprocessing, WarningRule, WarningRecord, PushRecord
 from app.analysis import basic_stats
 import requests
 import json
 import random
 import math
+import numpy as np
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -84,6 +85,575 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+# 多源气象数据接入模块
+# 数据源管理
+@app.route("/data-sources")
+@login_required
+def data_sources():
+    sources = DataSource.query.all()
+    return render_template("data_sources.html", sources=sources, user=current_user)
+
+@app.route("/data-sources/add", methods=["GET", "POST"])
+@login_required
+@admin_required
+def add_data_source():
+    if request.method == "POST":
+        source = DataSource(
+            name=request.form["name"],
+            source_type=request.form["source_type"],
+            url=request.form["url"],
+            api_key=request.form["api_key"],
+            status=request.form["status"]
+        )
+        db.session.add(source)
+        db.session.commit()
+        flash("数据源添加成功")
+        return redirect(url_for("data_sources"))
+    return render_template("add_data_source.html", user=current_user)
+
+# 数据接入接口
+@app.route("/api/data/ingest", methods=["POST"])
+def ingest_data():
+    """数据接入接口"""
+    try:
+        data = request.get_json()
+        source = data.get("source")
+        data_type = data.get("data_type")
+        records = data.get("records")
+        
+        # 记录数据接入日志
+        log = DataAccessLog(
+            data_source=source,
+            data_type=data_type,
+            record_count=len(records),
+            status="success",
+            message=f"成功接入{len(records)}条数据"
+        )
+        db.session.add(log)
+        
+        # 根据数据类型处理数据
+        if data_type == "station_observation":
+            for record in records:
+                observation = StationObservation(
+                    station_id=record["station_id"],
+                    timestamp=datetime.fromisoformat(record["timestamp"]),
+                    temperature=record.get("temperature"),
+                    humidity=record.get("humidity"),
+                    pressure=record.get("pressure"),
+                    wind_speed=record.get("wind_speed"),
+                    wind_direction=record.get("wind_direction"),
+                    precipitation=record.get("precipitation"),
+                    visibility=record.get("visibility")
+                )
+                db.session.add(observation)
+                # 数据质量检查
+                check_data_quality(observation.id, "station_observation", record)
+        elif data_type == "satellite_image":
+            for record in records:
+                image = SatelliteImage(
+                    image_type=record["image_type"],
+                    timestamp=datetime.fromisoformat(record["timestamp"]),
+                    image_url=record["image_url"],
+                    resolution=record.get("resolution"),
+                    description=record.get("description")
+                )
+                db.session.add(image)
+        elif data_type == "numerical_forecast":
+            for record in records:
+                forecast = NumericalForecast(
+                    model_name=record["model_name"],
+                    run_time=datetime.fromisoformat(record["run_time"]),
+                    forecast_time=datetime.fromisoformat(record["forecast_time"]),
+                    variable=record["variable"],
+                    value=record["value"],
+                    level=record.get("level")
+                )
+                db.session.add(forecast)
+                # 数据质量检查
+                check_data_quality(forecast.id, "numerical_forecast", record)
+        
+        db.session.commit()
+        return jsonify({"status": "success", "message": "数据接入成功"}), 200
+    except Exception as e:
+        # 记录失败日志
+        log = DataAccessLog(
+            data_source=request.get_json().get("source", "unknown"),
+            data_type=request.get_json().get("data_type", "unknown"),
+            record_count=0,
+            status="error",
+            message=str(e)
+        )
+        db.session.add(log)
+        db.session.commit()
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 数据质量控制模块
+@app.route("/data-quality")
+@login_required
+def data_quality():
+    quality_records = DataQuality.query.all()
+    return render_template("data_quality.html", quality_records=quality_records, user=current_user)
+
+# 数据质量检查函数
+def check_data_quality(data_id, data_type, record):
+    """检查数据质量"""
+    # 检查温度
+    if "temperature" in record and record["temperature"] is not None:
+        if record["temperature"] < -50 or record["temperature"] > 50:
+            quality = DataQuality(
+                data_id=data_id,
+                data_type=data_type,
+                is_valid=False,
+                error_type="out_of_range",
+                error_message=f"温度值超出合理范围: {record['temperature']}°C"
+            )
+            db.session.add(quality)
+    
+    # 检查湿度
+    if "humidity" in record and record["humidity"] is not None:
+        if record["humidity"] < 0 or record["humidity"] > 100:
+            quality = DataQuality(
+                data_id=data_id,
+                data_type=data_type,
+                is_valid=False,
+                error_type="out_of_range",
+                error_message=f"湿度值超出合理范围: {record['humidity']}%"
+            )
+            db.session.add(quality)
+    
+    # 检查气压
+    if "pressure" in record and record["pressure"] is not None:
+        if record["pressure"] < 800 or record["pressure"] > 1200:
+            quality = DataQuality(
+                data_id=data_id,
+                data_type=data_type,
+                is_valid=False,
+                error_type="out_of_range",
+                error_message=f"气压值超出合理范围: {record['pressure']}hPa"
+            )
+            db.session.add(quality)
+    
+    # 检查风速
+    if "wind_speed" in record and record["wind_speed"] is not None:
+        if record["wind_speed"] < 0 or record["wind_speed"] > 100:
+            quality = DataQuality(
+                data_id=data_id,
+                data_type=data_type,
+                is_valid=False,
+                error_type="out_of_range",
+                error_message=f"风速值超出合理范围: {record['wind_speed']}m/s"
+            )
+            db.session.add(quality)
+    
+    # 检查风向
+    if "wind_direction" in record and record["wind_direction"] is not None:
+        if record["wind_direction"] < 0 or record["wind_direction"] > 360:
+            quality = DataQuality(
+                data_id=data_id,
+                data_type=data_type,
+                is_valid=False,
+                error_type="out_of_range",
+                error_message=f"风向值超出合理范围: {record['wind_direction']}°"
+            )
+            db.session.add(quality)
+
+# 异常值检测接口
+@app.route("/api/data/detect-outliers", methods=["POST"])
+def detect_outliers():
+    """检测异常值"""
+    try:
+        data = request.get_json()
+        values = data.get("values")
+        threshold = data.get("threshold", 3)
+        
+        # 使用Z-score方法检测异常值
+        outliers = []
+        if values:
+            mean = np.mean(values)
+            std = np.std(values)
+            for i, value in enumerate(values):
+                z_score = abs((value - mean) / std)
+                if z_score > threshold:
+                    outliers.append({"index": i, "value": value, "z_score": z_score})
+        
+        return jsonify({"status": "success", "outliers": outliers}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 缺测插补接口
+@app.route("/api/data/impute", methods=["POST"])
+def impute_missing():
+    """缺测插补"""
+    try:
+        data = request.get_json()
+        values = data.get("values")
+        method = data.get("method", "mean")
+        
+        # 执行缺测插补
+        imputed_values = []
+        if values:
+            if method == "mean":
+                # 均值插补
+                valid_values = [v for v in values if v is not None]
+                mean_value = np.mean(valid_values) if valid_values else 0
+                imputed_values = [v if v is not None else mean_value for v in values]
+            elif method == "median":
+                # 中位数插补
+                valid_values = [v for v in values if v is not None]
+                median_value = np.median(valid_values) if valid_values else 0
+                imputed_values = [v if v is not None else median_value for v in values]
+            elif method == "linear":
+                # 线性插值
+                imputed_values = []
+                last_valid = None
+                next_valid = None
+                for i, v in enumerate(values):
+                    if v is not None:
+                        imputed_values.append(v)
+                        last_valid = v
+                    else:
+                        # 查找下一个有效值
+                        if next_valid is None:
+                            for j in range(i+1, len(values)):
+                                if values[j] is not None:
+                                    next_valid = values[j]
+                                    break
+                        if last_valid is not None and next_valid is not None:
+                            # 线性插值
+                            imputed = last_valid + (next_valid - last_valid) * (i - values.index(last_valid)) / (values.index(next_valid) - values.index(last_valid))
+                            imputed_values.append(imputed)
+                        else:
+                            imputed_values.append(last_valid if last_valid is not None else 0)
+        
+        return jsonify({"status": "success", "imputed_values": imputed_values}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 时空标准化接口
+@app.route("/api/data/normalize", methods=["POST"])
+def normalize_data():
+    """时空标准化"""
+    try:
+        data = request.get_json()
+        values = data.get("values")
+        method = data.get("method", "min_max")
+        
+        # 执行时空标准化
+        normalized_values = []
+        if values:
+            if method == "min_max":
+                # 最小-最大标准化
+                min_val = np.min(values)
+                max_val = np.max(values)
+                if max_val > min_val:
+                    normalized_values = [(v - min_val) / (max_val - min_val) for v in values]
+                else:
+                    normalized_values = [0 for v in values]
+            elif method == "z_score":
+                # Z-score标准化
+                mean = np.mean(values)
+                std = np.std(values)
+                if std > 0:
+                    normalized_values = [(v - mean) / std for v in values]
+                else:
+                    normalized_values = [0 for v in values]
+        
+        return jsonify({"status": "success", "normalized_values": normalized_values}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 核心分析引擎
+@app.route("/analysis")
+@login_required
+def analysis():
+    return render_template("analysis.html", user=current_user)
+
+# 积温计算接口
+@app.route("/api/analysis/gdd", methods=["POST"])
+def calculate_gdd_api():
+    """计算积温（GDD）"""
+    try:
+        data = request.get_json()
+        temperatures = data.get("temperatures")
+        base_temperature = data.get("base_temperature", 10)  # 默认基础温度10°C
+        
+        # 计算积温
+        gdd = 0
+        for temp in temperatures:
+            if temp > base_temperature:
+                gdd += temp - base_temperature
+        
+        return jsonify({"status": "success", "gdd": gdd}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 干旱指数计算接口
+@app.route("/api/analysis/drought-index", methods=["POST"])
+def calculate_drought_index():
+    """计算干旱指数"""
+    try:
+        data = request.get_json()
+        precipitation = data.get("precipitation")  # 降水量（mm）
+        potential_evaporation = data.get("potential_evaporation")  # 潜在蒸发量（mm）
+        
+        # 计算标准化降水蒸散指数（SPEI）
+        # 简化计算，实际项目中应使用更复杂的方法
+        water_balance = precipitation - potential_evaporation
+        
+        # 简化的干旱指数计算
+        if water_balance > 50:
+            drought_index = 0  # 无干旱
+        elif water_balance > 0:
+            drought_index = 1  # 轻度干旱
+        elif water_balance > -50:
+            drought_index = 2  # 中度干旱
+        elif water_balance > -100:
+            drought_index = 3  # 重度干旱
+        else:
+            drought_index = 4  # 极端干旱
+        
+        drought_levels = ["无干旱", "轻度干旱", "中度干旱", "重度干旱", "极端干旱"]
+        
+        return jsonify({"status": "success", "drought_index": drought_index, "drought_level": drought_levels[drought_index]}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 极端天气重现期计算接口
+@app.route("/api/analysis/recurrence-period", methods=["POST"])
+def calculate_recurrence_period():
+    """计算极端天气重现期"""
+    try:
+        data = request.get_json()
+        values = data.get("values")  # 历史数据
+        event_value = data.get("event_value")  # 事件值
+        
+        # 计算重现期（年）
+        # 使用耿贝尔分布拟合
+        if not values:
+            return jsonify({"status": "error", "message": "历史数据不能为空"}), 400
+        
+        # 简化计算，实际项目中应使用更复杂的方法
+        sorted_values = sorted(values)
+        n = len(sorted_values)
+        
+        # 计算事件在历史数据中的排名
+        rank = 1
+        for value in sorted_values:
+            if value < event_value:
+                rank += 1
+        
+        # 重现期计算（年）
+        recurrence_period = (n + 1) / (n - rank + 1)
+        
+        return jsonify({"status": "success", "recurrence_period": recurrence_period}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 智能预警系统
+@app.route("/warnings")
+@login_required
+def warning_records():
+    warning_records = WarningRecord.query.order_by(WarningRecord.created_at.desc()).all()
+    return render_template("warnings.html", warning_records=warning_records, user=current_user)
+
+# 预警规则管理
+@app.route("/warning-rules")
+@login_required
+def warning_rules():
+    rules = WarningRule.query.all()
+    return render_template("warning_rules.html", rules=rules, user=current_user)
+
+@app.route("/warning-rules/add", methods=["GET", "POST"])
+@login_required
+@admin_required
+def add_warning_rule():
+    if request.method == "POST":
+        rule = WarningRule(
+            rule_name=request.form["rule_name"],
+            parameter=request.form["parameter"],
+            operator=request.form["operator"],
+            threshold=float(request.form["threshold"]),
+            level=request.form["level"],
+            message=request.form["message"],
+            status=request.form["status"]
+        )
+        db.session.add(rule)
+        db.session.commit()
+        flash("预警规则添加成功")
+        return redirect(url_for("warning_rules"))
+    return render_template("add_warning_rule.html", user=current_user)
+
+# 预警检测接口
+@app.route("/api/warning/detect", methods=["POST"])
+def detect_warnings():
+    """检测预警"""
+    try:
+        data = request.get_json()
+        station_id = data.get("station_id")
+        location = data.get("location")
+        parameters = data.get("parameters")  # 参数字典，如 {"temperature": 25, "wind_speed": 15}
+        
+        # 获取所有活跃的预警规则
+        active_rules = WarningRule.query.filter_by(status="active").all()
+        
+        # 检测预警
+        warnings = []
+        for rule in active_rules:
+            if rule.parameter in parameters:
+                value = parameters[rule.parameter]
+                # 检查是否触发预警
+                trigger = False
+                if rule.operator == ">":
+                    trigger = value > rule.threshold
+                elif rule.operator == ">=":
+                    trigger = value >= rule.threshold
+                elif rule.operator == "<":
+                    trigger = value < rule.threshold
+                elif rule.operator == "<=":
+                    trigger = value <= rule.threshold
+                
+                if trigger:
+                    # 创建预警记录
+                    warning_record = WarningRecord(
+                        rule_id=rule.id,
+                        station_id=station_id,
+                        location=location,
+                        value=value,
+                        threshold=rule.threshold,
+                        level=rule.level,
+                        message=rule.message.format(value=value, threshold=rule.threshold)
+                    )
+                    db.session.add(warning_record)
+                    
+                    # 推送预警
+                    push_warning(warning_record)
+                    
+                    warnings.append({
+                        "rule_name": rule.rule_name,
+                        "level": rule.level,
+                        "message": warning_record.message
+                    })
+        
+        db.session.commit()
+        return jsonify({"status": "success", "warnings": warnings}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 推送预警
+def push_warning(warning_record):
+    """推送预警"""
+    # 模拟推送，实际项目中应接入短信、钉钉等推送服务
+    recipients = ["13800138000", "admin@example.com"]
+    
+    for recipient in recipients:
+        # 确定推送类型
+        if recipient.startswith("1") and len(recipient) == 11:
+            push_type = "sms"
+        else:
+            push_type = "email"
+        
+        # 创建推送记录
+        push_record = PushRecord(
+            warning_id=warning_record.id,
+            push_type=push_type,
+            recipient=recipient,
+            message=warning_record.message,
+            status="success"
+        )
+        db.session.add(push_record)
+        
+        # 模拟推送
+        print(f"推送{push_type}给{recipient}: {warning_record.message}")
+
+# RESTful API接口
+# 获取实时气温
+@app.route("/api/weather/realtime", methods=["GET"])
+def get_realtime_weather():
+    """获取实时天气数据"""
+    try:
+        station_id = request.args.get("station_id")
+        location = request.args.get("location")
+        
+        # 获取最新的观测数据
+        if station_id:
+            observation = StationObservation.query.filter_by(station_id=station_id).order_by(StationObservation.timestamp.desc()).first()
+        elif location:
+            # 实际项目中应根据位置查询最近的气象站
+            observation = StationObservation.query.order_by(StationObservation.timestamp.desc()).first()
+        else:
+            observation = StationObservation.query.order_by(StationObservation.timestamp.desc()).first()
+        
+        if observation:
+            weather_data = {
+                "station_id": observation.station_id,
+                "timestamp": observation.timestamp.isoformat(),
+                "temperature": observation.temperature,
+                "humidity": observation.humidity,
+                "pressure": observation.pressure,
+                "wind_speed": observation.wind_speed,
+                "wind_direction": observation.wind_direction,
+                "precipitation": observation.precipitation,
+                "visibility": observation.visibility
+            }
+            return jsonify({"status": "success", "data": weather_data}), 200
+        else:
+            return jsonify({"status": "error", "message": "未找到天气数据"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 获取未来3天逐小时预报
+@app.route("/api/weather/forecast", methods=["GET"])
+def get_forecast():
+    """获取未来3天逐小时预报"""
+    try:
+        location = request.args.get("location", "北京")
+        model = request.args.get("model", "ECMWF")
+        
+        # 生成模拟预报数据
+        forecast_data = []
+        now = datetime.utcnow()
+        
+        for i in range(72):  # 3天 * 24小时
+            forecast_time = now + timedelta(hours=i)
+            # 生成模拟数据
+            temperature = 20 + random.uniform(-5, 5)
+            humidity = 60 + random.uniform(-20, 20)
+            wind_speed = random.uniform(0, 10)
+            precipitation = random.uniform(0, 5)
+            
+            forecast_data.append({
+                "time": forecast_time.isoformat(),
+                "temperature": round(temperature, 2),
+                "humidity": round(humidity, 2),
+                "wind_speed": round(wind_speed, 2),
+                "precipitation": round(precipitation, 2)
+            })
+        
+        return jsonify({"status": "success", "location": location, "model": model, "forecast": forecast_data}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# 获取气象站列表
+@app.route("/api/stations", methods=["GET"])
+def get_stations():
+    """获取气象站列表"""
+    try:
+        stations = WeatherStation.query.all()
+        station_list = []
+        for station in stations:
+            station_list.append({
+                "station_id": station.station_id,
+                "name": station.name,
+                "latitude": station.latitude,
+                "longitude": station.longitude,
+                "altitude": station.altitude,
+                "station_type": station.station_type,
+                "status": station.status
+            })
+        return jsonify({"status": "success", "stations": station_list}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 # 气象站管理
 @app.route("/stations")

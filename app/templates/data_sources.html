@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}数据源管理{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">数据源管理</h1>
+    <a href="{{ url_for('add_data_source') }}" class="btn btn-primary mb-4">添加数据源</a>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">数据源列表</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>类型</th>
+                        <th>URL</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source in sources %}
+                    <tr>
+                        <td>{{ source.id }}</td>
+                        <td>{{ source.name }}</td>
+                        <td>{{ source.source_type }}</td>
+                        <td>{{ source.url }}</td>
+                        <td>{{ source.status }}</td>
+                        <td>{{ source.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <a href="#" class="btn btn-sm btn-info">编辑</a>
+                            <a href="#" class="btn btn-sm btn-danger">删除</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
