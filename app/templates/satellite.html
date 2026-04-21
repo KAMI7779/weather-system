@@ -10,22 +10,193 @@
         <a href="{{ url_for('update_satellite') }}" class="btn btn-primary">更新卫星云图</a>
     </div>
     
-    <div class="row">
-        {% for image in images %}
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">{{ image.image_type }}通道</h5>
+    {% if images %}
+    <div class="card">
+        <div class="card-body">
+            <!-- 控制栏 -->
+            <div class="mb-3">
+                <label>通道选择：</label>
+                <select id="channel-select" class="form-control d-inline-block w-auto ml-2">
+                    <option value="红外">红外</option>
+                    <option value="可见光">可见光</option>
+                    <option value="水汽">水汽</option>
+                </select>
+            </div>
+            
+            <!-- 卫星云图展示区 -->
+            <div class="position-relative">
+                <div id="satellite-viewer" class="w-100 position-relative" style="min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                    <!-- 卫星云图 -->
+                    <img id="satellite-image" src="" alt="卫星云图" class="w-100 object-fit-contain">
+                    
+                    <!-- 地理边界叠加 -->
+                    <div id="geo-boundary" class="position-absolute top-0 left-0 w-100" style="height: 100%; min-height: 400px;"></div>
+                    
+                    <!-- 色标条 -->
+                    <div id="color-bar" class="position-absolute top-10 right-10 w-60 h-300 bg-white p-2 border rounded shadow">
+                        <h6 class="text-center">亮温 (°C)</h6>
+                        <div class="color-scale" style="height: 200px; background: linear-gradient(to bottom, #0000ff, #00ffff, #ffff00, #ff0000); margin: 10px 0;"></div>
+                        <div class="d-flex justify-content-between">
+                            <span>-80</span>
+                            <span>40</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 加载失败提示 -->
+                    <div id="load-error" class="position-absolute top-0 left-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-80 rounded shadow hidden">
+                        <p class="text-center">图片加载失败</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <img src="{{ image.image_url }}" class="img-fluid" alt="{{ image.description }}">
-                    <p class="mt-2"><strong>时间:</strong> {{ image.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                    <p><strong>分辨率:</strong> {{ image.resolution }}</p>
-                    <p><strong>描述:</strong> {{ image.description }}</p>
+            </div>
+            
+            <!-- 卫星信息 -->
+            <div class="mt-3 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>卫星名称:</strong> <span id="satellite-name">Himawari-8</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>传感器:</strong> <span id="sensor">AHI</span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>时次:</strong> <span id="image-time"></span></p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>分辨率:</strong> <span id="image-resolution"></span></p>
+                    </div>
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center">
+            <p>暂无卫星云图数据</p>
+            <a href="{{ url_for('update_satellite') }}" class="btn btn-primary">更新卫星云图</a>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+    // 卫星云图数据
+    const satelliteData = [
+        {% for image in images %}
+        {
+            type: "{{ image.image_type }}",
+            url: "{{ image.image_url }}",
+            timestamp: "{{ image.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}",
+            date: "{{ image.timestamp.strftime('%Y-%m-%d') }}",
+            resolution: "{{ image.resolution }}",
+            description: "{{ image.description }}"
+        },
+        {% endfor %}
+    ];
+    
+    // 当前状态
+    let currentIndex = 0;
+    let currentChannel = "红外";
+    let isPlaying = false;
+    let playInterval;
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 按时间排序数据（最新的在前）
+        satelliteData.sort(function(a, b) {
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+        
+        updateSatelliteView();
+        setupEventListeners();
+    });
+    
+    // 更新卫星云图视图
+    function updateSatelliteView() {
+        const filteredData = satelliteData.filter(item => item.type === currentChannel);
+        if (filteredData.length === 0) {
+            const imageElement = document.getElementById('satellite-image');
+            const loadErrorElement = document.getElementById('load-error');
+            imageElement.src = '';
+            imageElement.style.opacity = '0.5';
+            loadErrorElement.classList.remove('hidden');
+            loadErrorElement.querySelector('p').textContent = '当前通道暂无数据';
+            return;
+        }
+        
+        currentIndex = Math.min(currentIndex, filteredData.length - 1);
+        const data = filteredData[currentIndex];
+        
+        const imageElement = document.getElementById('satellite-image');
+        const loadErrorElement = document.getElementById('load-error');
+        
+        // 显示加载状态
+        imageElement.style.opacity = '0.5';
+        loadErrorElement.classList.add('hidden');
+        
+        // 加载图片
+        const img = new Image();
+        // 添加时间戳参数，避免浏览器缓存
+        const urlWithCacheBuster = data.url + (data.url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+        img.onload = function() {
+            imageElement.src = urlWithCacheBuster;
+            imageElement.style.opacity = '1';
+            loadErrorElement.classList.add('hidden');
+        };
+        img.onerror = function() {
+            loadErrorElement.classList.remove('hidden');
+            loadErrorElement.querySelector('p').textContent = '图片加载失败';
+            imageElement.style.opacity = '0.5';
+        };
+        img.src = urlWithCacheBuster;
+        
+        // 更新信息
+        document.getElementById('image-time').textContent = data.timestamp;
+        document.getElementById('image-resolution').textContent = data.resolution;
+    }
+    
+    // 设置事件监听器
+    function setupEventListeners() {
+        // 通道选择
+        document.getElementById('channel-select').addEventListener('change', function(e) {
+            currentChannel = e.target.value;
+            currentIndex = 0; // 默认显示最新时次
+            updateSatelliteView();
+        });
+    }
+    
+    // 模拟地理边界数据（实际项目中应使用真实的GeoJSON数据）
+    function drawGeoBoundary() {
+        // 这里可以使用ECharts或其他库来绘制地理边界
+        // 简化示例，实际项目中应加载真实的GeoJSON数据
+        const boundaryElement = document.getElementById('geo-boundary');
+        boundaryElement.innerHTML = '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 2px solid rgba(255, 255, 255, 0.5); pointer-events: none;"></div>';
+    }
+    
+    // 绘制地理边界
+    drawGeoBoundary();
+</script>
+
+<style>
+    .hidden {
+        display: none;
+    }
+    
+    #satellite-viewer {
+        background-color: #000;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    #geo-boundary {
+        pointer-events: none;
+    }
+    
+    #color-bar {
+        max-width: 80px;
+    }
+    
+    .color-scale {
+        width: 100%;
+    }
+</style>
 {% endblock %}

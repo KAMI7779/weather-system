@@ -16,29 +16,78 @@
         <h1>天气数据分析系统</h1>
         <div class="nav-links">
             <span>{{ user.username }}</span>
-            <a href="/">首页</a>
-            <a href="/national-weather">全国气象</a>
-            <a href="/realtime">实时天气</a>
-            <a href="/cities">城市管理</a>
-            <a href="/stations">气象站管理</a>
-            <a href="/satellite">卫星云图</a>
-            <a href="/radar">雷达回波图</a>
-            <a href="/numerical-forecast">数值预报</a>
-            <a href="/data-sync">数据同步</a>
-            <a href="/import-data">批量导入</a>
-            <a href="/weather-calculations">气象计算</a>
-            <a href="/nowcast">短临预报</a>
-            <a href="/kriging">温度热力图</a>
-            <a href="/visualization">高级可视化</a>
-            <a href="/history">历史数据</a>
-            <a href="/data-sources">数据源管理</a>
-            <a href="/data-quality">数据质量控制</a>
-            <a href="/analysis">核心分析</a>
-            <a href="/warning-rules">预警规则</a>
-            <a href="/warnings">预警管理</a>
-            {% if user.role == 'admin' %}
-            <a href="/admin">管理员后台</a>
-            {% endif %}
+            
+            <!-- 总览驾驶舱 -->
+            <div class="dropdown">
+                <a href="/" class="dropbtn">📊 总览驾驶舱</a>
+                <div class="dropdown-content">
+                    <a href="/">首页</a>
+                </div>
+            </div>
+            
+            <!-- 实况监测 -->
+            <div class="dropdown">
+                <a href="#" class="dropbtn">🌍 实况监测</a>
+                <div class="dropdown-content">
+                    <a href="/national-weather">全天气总览</a>
+                    <a href="/realtime">实时气象</a>
+                    <a href="/satellite">卫星云图</a>
+                    <a href="/radar">雷达回波图</a>
+                </div>
+            </div>
+            
+            <!-- 预报预测 -->
+            <div class="dropdown">
+                <a href="#" class="dropbtn">📈 预报预测</a>
+                <div class="dropdown-content">
+                    <a href="/numerical-forecast">数值预报</a>
+                    <a href="/nowcast">短临预报</a>
+                </div>
+            </div>
+            
+            <!-- 空间分析 -->
+            <div class="dropdown">
+                <a href="#" class="dropbtn">🗺️ 空间分析</a>
+                <div class="dropdown-content">
+                    <a href="/kriging">温度热力图</a>
+                    <a href="/weather-calculations">气象计算</a>
+                </div>
+            </div>
+            
+            <!-- 数据管理 -->
+            <div class="dropdown">
+                <a href="#" class="dropbtn">⚙️ 数据管理</a>
+                <div class="dropdown-content">
+                    <a href="#">基础档案</a>
+                    <a href="/cities">城市管理</a>
+                    <a href="/stations">气象站管理</a>
+                    <a href="#">数据接入</a>
+                    <a href="/data-sources">数据源配置</a>
+                    <a href="/data-sync">数据同步</a>
+                    <a href="/import-data">批量导入</a>
+                    <a href="#">数据治理</a>
+                    <a href="/data-quality">质量控制</a>
+                    <a href="/history">历史数据归档查询</a>
+                </div>
+            </div>
+            
+            <!-- 预警中心 -->
+            <div class="dropdown">
+                <a href="#" class="dropbtn">🚨 预警中心</a>
+                <div class="dropdown-content">
+                    <a href="/warnings">预警管理后台</a>
+                    <a href="/warning-rules">规则引擎配置</a>
+                </div>
+            </div>
+            
+            <!-- 系统设置 -->
+            <div class="dropdown">
+                <a href="#" class="dropbtn">👤 系统设置</a>
+                <div class="dropdown-content">
+                    <a href="/admin">用户权限 / 日志审计</a>
+                </div>
+            </div>
+            
             <a href="/logout">退出</a>
         </div>
     </div>

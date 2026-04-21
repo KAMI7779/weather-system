@@ -612,7 +612,7 @@ def get_forecast():
         
         # 生成模拟预报数据
         forecast_data = []
-        now = datetime.utcnow()
+        now = datetime.now()
         
         for i in range(72):  # 3天 * 24小时
             forecast_time = now + timedelta(hours=i)
@@ -720,7 +720,7 @@ def api_station_data(station_id):
         data = request.get_json()
         observation = StationObservation(
             station_id=station_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(),
             temperature=data.get("temperature"),
             humidity=data.get("humidity"),
             pressure=data.get("pressure"),
@@ -752,7 +752,6 @@ def radar():
 # 模拟获取卫星云图（实际项目中应从API获取）
 @app.route("/satellite/update")
 @login_required
-@admin_required
 def update_satellite():
     """模拟更新卫星云图数据"""
     try:
@@ -761,8 +760,8 @@ def update_satellite():
         for img_type in image_types:
             image = SatelliteImage(
                 image_type=img_type,
-                timestamp=datetime.utcnow(),
-                image_url=f"https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=satellite%20cloud%20image%20of%20china%20{img_type}&image_size=landscape_16_9",
+                timestamp=datetime.now(),
+                image_url=f"https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=satellite%20cloud%20image%20of%20china%20{img_type}%20{datetime.now().strftime('%Y%m%d%H%M%S')}&image_size=landscape_16_9",
                 resolution="1km",
                 description=f"{img_type}通道卫星云图"
             )
@@ -776,7 +775,6 @@ def update_satellite():
 # 模拟获取雷达回波图（实际项目中应从API获取）
 @app.route("/radar/update")
 @login_required
-@admin_required
 def update_radar():
     """模拟更新雷达回波图数据"""
     try:
@@ -785,7 +783,7 @@ def update_radar():
         for radar_id in radar_ids:
             echo = RadarEcho(
                 radar_id=radar_id,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(),
                 image_url=f"https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=radar%20echo%20image%20of%20{radar_id}&image_size=landscape_16_9",
                 max_echo=50.0,
                 coverage_area=f"{radar_id}周边200km",
@@ -816,13 +814,12 @@ def numerical_forecast():
 # 模拟更新数值预报模式数据
 @app.route("/numerical-forecast/update")
 @login_required
-@admin_required
 def update_numerical_forecast():
     """模拟更新数值预报模式数据"""
     try:
         models = ["ECMWF", "GFS"]
         variables = ["temperature", "precipitation", "wind_speed", "pressure"]
-        run_time = datetime.utcnow()
+        run_time = datetime.now()
         
         # 生成未来7天的预报数据
         for model in models:
@@ -1046,7 +1043,7 @@ def precipitation_nowcast():
         # 实际项目中应使用雷达回波数据进行外推
         forecast_data = []
         for i in range(12):  # 未来2小时，每10分钟一个预报
-            time = datetime.utcnow() + timedelta(minutes=i*10)
+            time = datetime.now() + timedelta(minutes=i*10)
             precipitation = random.uniform(0, 10)
             forecast_data.append({
                 "time": time.strftime("%H:%M"),
@@ -1080,7 +1077,7 @@ def calculate_flash_flood_risk():
             rainfall_forecast=rainfall_forecast,
             soil_moisture=random.uniform(0.3, 0.8),
             terrain_factor=random.uniform(0.5, 1.5),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now()
         )
         db.session.add(flash_flood_risk)
         db.session.commit()
@@ -1926,7 +1923,7 @@ def national_weather():
                 'description': weather_data['description'],
                 'aqi': weather_data['aqi'],
                 'livability_score': round(livability_score, 2),
-                'date': datetime.utcnow()
+                'date': datetime.now()
             }
     
     # 如果API获取失败，尝试使用数据库中的数据
